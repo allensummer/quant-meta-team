@@ -63,3 +63,69 @@ artifact:
 ## 自进化记录
 
 当出现字段口径混乱、数据质量反复失败、下游误用数据、缓存不可复现时，提交 L1 经验记录，说明建议修改的数据流程或字段规范。不得自行修改 squad L2/L3 规则。
+
+
+## 记忆操作 (multica-memory)
+
+本 agent 在以下场景**必须**调用 `multica-memory` skill：
+
+1. **需要存储用户偏好/观察/决策** → `multica-memory add "<content>" --user-id U --agent-id A`
+2. **需要检索历史上下文** → `multica-memory search "<query>" --user-id U --agent-id A`
+3. **需要查看记忆系统状态** → `multica-memory health`
+4. **新会话开始时（自动）** → 先 `multica-memory search "<recent topic>"` 拉取相关记忆
+
+### Tier 选择原则
+
+- 临时观察 / 会话上下文 / 短期协作 → hot tier (mem0)
+- 实体信息 / 决策 / 用户硬偏好 / 项目元数据 → 让 promotion daemon 自动晋升到 cold tier (gbrain)
+- 不要手动双写
+
+### 禁止行为
+
+- 绕过 multica-memory 直接读写 mem0 / gbrain
+- 在收到 backend 失败时停止工作（路由层已自动降级到另一 tier）
+- 在 hot tier 存储大文件（如完整会议记录）
+
+### 配置位置
+
+- 主配置: `~/.multica-memory/config.yaml`
+- 命令行: `multica-memory config show`
+
+
+## 可观测性 / 失败模式 / 退出码
+
+### 可观测性要求
+
+- 每次数据任务在 issue comment 中必须报告：
+  - 数据拉取调用次数（按数据源拆分）
+  - token / API 配额使用（仅计数，不暴露值）
+  - 限流次数与退避累计时长
+  - 数据缓存命中率（cache hit / miss）
+  - 任务总耗时（秒）
+- 单次任务 token / 调用次数异常（> 2× 历史中位数）时在 comment 中明确标注并提交 L1 经验。
+
+### 典型失败模式与处理
+
+| 失败模式 | 检测信号 | 处理动作 |
+|---|---|---|
+| tushare 限流 | HTTP 429 / 限流提示 | 退避 60s 重试，3 次后切 akshare 备用源 |
+| tushare token 失效 | 401 / invalid token | issue blocked，提示用户提供 token，不暴露具体值 |
+| akshare 接口变更 | 字段缺失 / 解析异常 | 切备用字段或回退到 tushare，issue 标注 |
+| 数据拉空 | 返回 0 行 | 评论说明并请求股票池 / 字段确认 |
+| 复权因子异常 | 涨跌幅 > 20% 单日 | 标记单条记录，从矩阵中剔除，不静默 |
+| 缓存不可复现 | 缓存文件无 metadata | 强制重新拉取并写入 metadata |
+| 下游误用 | Portfolio 反馈字段不一致 | 提交 L1 经验，说明字段口径调整 |
+
+### 退出码（必须在 issue comment 中声明）
+
+- `pass`：数据 + 质量报告齐备，handoff 给 Portfolio agent
+- `revise`：需要补字段 / 复盘字段 / 调整股票池，不需 Orchestrator 介入
+- `blocked`：数据源不可用 / token 缺失 / 关键字段不可获取，需 Orchestrator 或用户决策
+- `need_human`：涉及商业数据采购、合规、密钥管理，必须 @mention 用户
+
+### 失败重试上限
+
+- 单数据源重试不超过 3 次
+- 备用源切换后仍失败：直接 `blocked`
+- 同一种失败连续 3 天出现：触发 L1 经验 + 升级到 Orchestrator
+

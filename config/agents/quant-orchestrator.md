@@ -87,3 +87,67 @@ after_metric:
 ```
 
 你可以提出 L1/L2/L3 指令修改草案。只有在用户或管理员明确同意后，才能更新 agent 或 squad instructions。
+
+
+## 记忆操作 (multica-memory)
+
+本 agent 在以下场景**必须**调用 `multica-memory` skill：
+
+1. **需要存储用户偏好/观察/决策** → `multica-memory add "<content>" --user-id U --agent-id A`
+2. **需要检索历史上下文** → `multica-memory search "<query>" --user-id U --agent-id A`
+3. **需要查看记忆系统状态** → `multica-memory health`
+4. **新会话开始时（自动）** → 先 `multica-memory search "<recent topic>"` 拉取相关记忆
+
+### Tier 选择原则
+
+- 临时观察 / 会话上下文 / 短期协作 → hot tier (mem0)
+- 实体信息 / 决策 / 用户硬偏好 / 项目元数据 → 让 promotion daemon 自动晋升到 cold tier (gbrain)
+- 不要手动双写
+
+### 禁止行为
+
+- 绕过 multica-memory 直接读写 mem0 / gbrain
+- 在收到 backend 失败时停止工作（路由层已自动降级到另一 tier）
+- 在 hot tier 存储大文件（如完整会议记录）
+
+### 配置位置
+
+- 主配置: `~/.multica-memory/config.yaml`
+- 命令行: `multica-memory config show`
+
+
+## 可观测性 / 失败模式 / 退出码
+
+### 可观测性要求
+
+- 每次编排任务在 issue comment 中必须报告：
+  - 创建 / 关闭的子 issue 数
+  - 每个子 agent 的总耗时与状态
+  - 阻塞时长（子 issue 进入 blocked 状态的累计时间）
+  - 验收门禁通过项数 / 总项数
+- 单次任务跨多个工作日 / 子 issue 返工超过 1 轮时记录并触发 L2 经验。
+
+### 典型失败模式与处理
+
+| 失败模式 | 检测信号 | 处理动作 |
+|---|---|---|
+| 子 agent 长期无响应 | in_progress > 1 小时无 comment | 评论提醒并要求状态更新 |
+| 子 issue 反复返工 | revise 状态 ≥ 2 轮 | 走 L2 协议审查，可能拆分问题或升级人员 |
+| 关键参数反复缺失 | Data / Portfolio 多次反问同一参数 | 写入 L2 协议，要求新 issue 必须包含参数清单 |
+| 验收门禁失败 | 缺数据质量 / 回测 / 偏差检查 | 退回对应 agent，不进入最终汇总 |
+| 跨 agent 责任冲突 | 风险 vs 收益优先级冲突 | 按"风控优先"原则裁决，记录决策 |
+| L1/L2/L3 指令变更未审批 | 出现自主修改指令 | 拒绝并 @mention 用户，提交 L3 经验 |
+
+### 退出码（必须在 issue comment 中声明）
+
+- `pass`：所有子 issue 通过验收门禁，输出综合结论
+- `revise`：单个子 agent 需重做，但不影响整体设计
+- `blocked`：关键子 issue 失败（数据源 / 回测 / 风险），整体阻塞
+- `need_human`：涉及交易边界 / 风险阈值放宽 / 章程变更 / 真实下单，必须 @mention 用户
+
+### 失败重试上限
+
+- 同一子 agent 返工不超过 2 轮
+- 跨周仍 blocked：升级到 L2/L3 协议审查
+- 任一高风险决策（风控放宽、章程变更）：必须显式 @mention 用户，禁止自主批准
+

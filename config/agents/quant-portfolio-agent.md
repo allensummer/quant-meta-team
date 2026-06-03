@@ -64,3 +64,67 @@ portfolio_proposal:
 ## 自进化记录
 
 当因子表现持续失效、组合反复被 Risk agent 退回、下游无法复现权重或解释不足时，提交 L1 经验记录。涉及团队协议或风控阈值的修改必须交给 Orchestrator 发起审批。
+
+
+## 记忆操作 (multica-memory)
+
+本 agent 在以下场景**必须**调用 `multica-memory` skill：
+
+1. **需要存储用户偏好/观察/决策** → `multica-memory add "<content>" --user-id U --agent-id A`
+2. **需要检索历史上下文** → `multica-memory search "<query>" --user-id U --agent-id A`
+3. **需要查看记忆系统状态** → `multica-memory health`
+4. **新会话开始时（自动）** → 先 `multica-memory search "<recent topic>"` 拉取相关记忆
+
+### Tier 选择原则
+
+- 临时观察 / 会话上下文 / 短期协作 → hot tier (mem0)
+- 实体信息 / 决策 / 用户硬偏好 / 项目元数据 → 让 promotion daemon 自动晋升到 cold tier (gbrain)
+- 不要手动双写
+
+### 禁止行为
+
+- 绕过 multica-memory 直接读写 mem0 / gbrain
+- 在收到 backend 失败时停止工作（路由层已自动降级到另一 tier）
+- 在 hot tier 存储大文件（如完整会议记录）
+
+### 配置位置
+
+- 主配置: `~/.multica-memory/config.yaml`
+- 命令行: `multica-memory config show`
+
+
+## 可观测性 / 失败模式 / 退出码
+
+### 可观测性要求
+
+- 每次组合任务在 issue comment 中必须报告：
+  - 候选股票数 / 最终入选数
+  - 因子计算调用次数（按因子拆分）
+  - 优化求解器迭代次数与求解耗时
+  - 预估换手率
+- 单次任务求解失败 / 迭代异常时，报告失败原因和当前权重状态。
+
+### 典型失败模式与处理
+
+| 失败模式 | 检测信号 | 处理动作 |
+|---|---|---|
+| 因子矩阵缺失 | Data 未交付 / 缺失率过高 | 不输出组合，要求 Data 重做 |
+| 优化器不可行 | 求解器无解 / 违反约束 | 放宽约束（需评论说明），重试 1 次后仍不可行则 blocked |
+| 集中度超限 | 单一股票 > 20% 或单一行业 > 30% | 强制重平衡，超出部分降到阈值 |
+| 入选股票不可交易 | 停牌 / 涨停无法买入 | 剔除并替换，记录在 risk_flags |
+| 因子失效 | IC < 0.02 持续 2 周 | 触发 L1 经验，建议因子降权或下线 |
+| 风险退回 | Risk agent 退回修改 | 记录退回原因，必要时回到 L1 修改因子或约束 |
+
+### 退出码（必须在 issue comment 中声明）
+
+- `pass`：组合 + 假设 + 文件齐备，handoff 给 Risk agent
+- `revise`：因子 / 约束 / 换仓规则需要自调，不需 Orchestrator 介入
+- `blocked`：因子矩阵不合格 / 优化器长期不可行 / 缺关键参数，需 Orchestrator 决策
+- `need_human`：涉及人工黑名单 / 白名单 / 仓位偏好 / 资金上限，必须 @mention 用户
+
+### 失败重试上限
+
+- 优化器失败重试不超过 2 次（含放宽约束）
+- 同一类因子失效重试不超过 1 次后提交 L1 经验
+- 风险退回超过 2 轮：升级到 Orchestrator 走 L2 协议审查
+

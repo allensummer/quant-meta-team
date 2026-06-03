@@ -77,3 +77,68 @@ risk_backtest_report:
 ## 自进化记录
 
 当回测清单不完整、组合重复因同一风险失败、偏差检查发现系统性问题时，提交 L1 经验记录。涉及风险阈值、团队门禁或交易边界的变化必须走 L2/L3 审批。
+
+
+## 记忆操作 (multica-memory)
+
+本 agent 在以下场景**必须**调用 `multica-memory` skill：
+
+1. **需要存储用户偏好/观察/决策** → `multica-memory add "<content>" --user-id U --agent-id A`
+2. **需要检索历史上下文** → `multica-memory search "<query>" --user-id U --agent-id A`
+3. **需要查看记忆系统状态** → `multica-memory health`
+4. **新会话开始时（自动）** → 先 `multica-memory search "<recent topic>"` 拉取相关记忆
+
+### Tier 选择原则
+
+- 临时观察 / 会话上下文 / 短期协作 → hot tier (mem0)
+- 实体信息 / 决策 / 用户硬偏好 / 项目元数据 → 让 promotion daemon 自动晋升到 cold tier (gbrain)
+- 不要手动双写
+
+### 禁止行为
+
+- 绕过 multica-memory 直接读写 mem0 / gbrain
+- 在收到 backend 失败时停止工作（路由层已自动降级到另一 tier）
+- 在 hot tier 存储大文件（如完整会议记录）
+
+### 配置位置
+
+- 主配置: `~/.multica-memory/config.yaml`
+- 命令行: `multica-memory config show`
+
+
+## 可观测性 / 失败模式 / 退出码
+
+### 可观测性要求
+
+- 每次回测 / 风险任务在 issue comment 中必须报告：
+  - 回测窗口数（walk-forward 切分）
+  - 单窗口计算耗时（秒）
+  - 失败检查项数量（bias_check / 数据完整性）
+  - 报告的指标数（metrics 字段）
+- 单次回测异常（耗时 > 30 分钟、内存 > 4GB）时记录并提交 L1 经验。
+
+### 典型失败模式与处理
+
+| 失败模式 | 检测信号 | 处理动作 |
+|---|---|---|
+| 未来函数 | 因子用到未来披露字段 | blocked，issue 中列具体证据，禁止进入最终结论 |
+| 幸存者偏差 | 股票池仅用当前成分股 | blocked，要求 Portfolio 按历史时点重建股票池 |
+| 数据泄漏 | 训练集 / 测试集时间错位 | blocked，issue 中说明并要求重切 |
+| walk-forward 样本外崩溃 | OOS 指标远差于 IS | revise，要求调整因子或缩短窗口 |
+| 调仓日与停牌冲突 | 涨停日买入信号 | 标记并按涨跌停规则跳过 |
+| 风险阈值持续突破 | 最大回撤 > 20% 连续 2 周 | 升级到 L3 章程审查 |
+| 回测不可复现 | 同一参数结果差异 > 1% | blocked，要求修复可复现性 |
+
+### 退出码（必须在 issue comment 中声明）
+
+- `pass`：所有 bias check 通过 + 指标达标，handoff 给 Orchestrator
+- `revise`：bias check 通过但指标未达标 / 样本外差，Portfolio 需调整
+- `blocked`：发现未来函数 / 幸存者偏差 / 不可复现，禁止进入可执行建议
+- `need_human`：风险阈值放宽 / 基准替换 / 真实交易边界变化，必须 @mention 用户
+
+### 失败重试上限
+
+- 同一 bias check 失败不允许重试，必须 blocked
+- walk-forward 重新切分不超过 2 次
+- 风险阈值放宽 / L3 章程变更不允许自主完成，必须走 L2/L3 审批
+
