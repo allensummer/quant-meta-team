@@ -2,9 +2,10 @@
 
 > 适用范围：quant-meta-team 三 agent 协作（Data → Portfolio → Risk）。
 > 维护：quant-orchestrator；落地执行：quant-data-agent。
-> 状态：**v0.5**（Week 1 验收通过：5 表 schema + DuckDB 视图骨架 + 46/46 测试 / 84% coverage 全部就位；3 张表游标已到 2024-01+，剩 1.5-2.5 年补全 + daily_basic 整体重做 + APScheduler 派给 [ADM-608](mention://issue/9c768f56-cf61-4670-818a-cf1c852acceb)）。
+> 状态：**v0.6**（Week 2 验收通过：5 表游标全部 ≥ 2026-06-05、APScheduler 17:30 + launchd 模板就位、58/58 测试 / 83.4% coverage；Week 3 [ADM-611](mention://issue/c4d7e577-5bbe-40a9-8888-90274b4ee5ff) 已派发 — Portfolio/Risk 切 DuckDB + 并发读验证 + 下游接入文档）。
 >
 > **变更记录**：
+> - v0.6 (2026-06-05)：Week 2 验收 (ADM-608 done) —— 5 表游标全部 2026-06-05、APScheduler 17:30 + launchd 模板 + 58/58 测试 83.4% coverage；Week 3 (ADM-611) 派发 — A: Portfolio 切 DuckDB + 动量/反转样例 / B: Risk 切 DuckDB + 月频回测 / C: 多 agent 并发读验证（v0.4 §9.6 #6）/ D: 下游接入指南 + 新源 contribution guide（§11 + §12 + README 章节）。
 > - v0.5 (2026-06-05)：Week 1 验收 (ADM-606 done) —— 5 表 schema + DuckDB 视图 (mv_daily_v1/qfq/hfq/trade_cal) + 46/46 测试 84% coverage；3 表游标到 2024-01+，daily_basic 因 RateLimit 抛错中断在 2010-01-04；Week 2 (ADM-608) 派发：补全 3 表 + 修 daily_basic RateLimit backoff + APScheduler 17:30 + launchd plist 模板。
 > - v0.4 (2026-06-05)：按用户 19:12 指令改为**本地优先**——`DATA_DIR` 默认 `~/Code/quant-meta-team/quant_data/data`（项目仓库内，方便一起版本化/迁移），外置盘 `/Volumes/RSS_DATA/quant_data` 作为后续迁移目标；降级策略由 `blocked + @mention` 放宽为 `warn + 本地落盘 + 一次 mention`；新增 §6.6 显式迁移清单（rsync / rename / 重启调度）。
 > - v0.3 (2026-06-05)：外挂硬盘约定对齐 `~/news-rss`——卷标 `RSS_DATA`，根目录 `/Volumes/RSS_DATA/quant_data`；补充 rss 项目的实际探活结果（卷当前**未挂载**）。
@@ -385,7 +386,7 @@ quant-data/                                  # 实际路径：~/Code/quant-meta-
 
 1. **Week 1（已派发）**：①**本机默认路径** `~/Code/quant-meta-team/quant_data/data`（不依赖外置盘）；②`tushare.pro.stock_basic` 探活（已验证 token OK）；③同步 `stock_basic` + `trade_cal` + `daily` + `adj_factor` + `daily_basic` 全市场历史（按 trade_date 拉，5 千只 × 1 日 = 1 次请求），落 Parquet 到本机；④DuckDB 建视图 `mv_daily_v1`（多源融合骨架）；⑤写 `tests/test_local_fallback.py`（验证 `DATA_DIR` 缺失回退本地、显式 `/Volumes/...` 挂载缺失也回退）。
 2. **Week 2**：①接 APScheduler 每日 17:30 增量同步（200 req/min 留 20% 余量，跑到 ~160 req/min）；②写 `sync_state` 游标 + `meta/_lineage`；③加 `test_resume`、`test_registry`。
-3. **Week 3**：①Portfolio / Risk agent 切到 DuckDB 查询；②写 README + 接入新源指引（`_template.py`）；③跑 7 天压测，收集 `token_calls_per_min` / `cache_hit_rate` 写 L1 经验。
+3. **Week 3**：①Portfolio / Risk agent 切到 DuckDB 查询；②写 README + 接入新源指引（`_template.py`）；③跑 7 天压测，收集 `token_calls_per_min` / `cache_hit_rate` 写 L1 经验。Week 3 已派发为 [ADM-611](mention://issue/c4d7e577-5bbe-40a9-8888-90274b4ee5ff)（A+B+C+D），详见 §11 §12。
 
 ## 9. 未验证假设（落地前需要 Data agent 实测确认）
 
@@ -397,7 +398,205 @@ quant-data/                                  # 实际路径：~/Code/quant-meta-
 6. **停牌日 `high==low` 判定的可靠性**：极少数事件（首日上市、复牌首日）可能误判。**需 Risk agent 在回测前做白名单覆盖**。
 7. **tushare 复权因子 vs 通达信/同花顺复权因子的数值一致性**：偶有口径差异（红筹股 / CDR）。**需在 MVP 跑通后抽样 5-10 只股票比对**。
 8. **多 agent 并发写 Parquet 时的冲突**：当前规划是 Data 单写、Portfolio/Risk 只读；**若后续多写需加 advisory lock**。
-9. **后续新数据源接入是否真的"不改 agent 代码"**：注册新源时需要写 adapter + schema，但 Portfolio / Risk 的 SQL 不能动。**第 3 周专门跑一遍接入 Wind/聚宽的 dry-run 验证**。
+9. **后续新数据源接入是否真的"不改 agent 代码"**：注册新源时需要写 adapter + schema，但 Portfolio / Risk 的 SQL 不能动。**第 3 周专门跑一遍接入 Wind/聚宽的 dry-run 验证**（参见 §12 contribution guide）。
+
+## 11. 下游接入指南（Portfolio / Risk Agent）
+
+> 适用对象：quant-portfolio-agent、quant-risk-agent，以及任何后续接入的下游策略代码。
+
+### 11.1 唯一允许的 import
+
+```python
+# ✅ 允许
+from quant_data.store.duckdb_store import DuckDBStore
+from quant_data.registry import SOURCES, SCHEMAS, get_source, get_schema
+from quant_data.sources.base import DataSource, DataStore, TableSchema, FieldSpec
+
+# ❌ 禁止（直连数据源 = 绕过 SourceRegistry，无法复用 lineage / 限频 / 单元统一）
+import tushare
+import akshare
+from tushare import pro_api
+from akshare import stock_zh_a_hist
+```
+
+> **CI 门禁**：`quant_portfolio/` 与 `quant_risk/` 下 `grep -RE "import tushare|import akshare|from tushare|from akshare"` 必须 0 命中；Week 3 A/B 子 issue DoD 第 3 项已写入此检查。
+
+### 11.2 拿数据：只通过 DuckDBStore.query()
+
+```python
+from quant_data.store.duckdb_store import DuckDBStore
+
+store = DuckDBStore(read_only=True)   # Portfolio / Risk 必须 read_only=True
+df = store.query(
+    """
+    SELECT ts_code, trade_date, close_qfq
+    FROM mv_daily_qfq
+    WHERE trade_date BETWEEN ? AND ?
+      AND ts_code IN (SELECT ts_code FROM raw_tushare_stock_basic
+                       WHERE list_status = 'L' AND delist_date IS NULL)
+    ORDER BY ts_code, trade_date
+    """,
+    params={"start": "2025-01-01", "end": "2025-06-05"},
+)
+```
+
+要点：
+- **不写 SQL 字符串拼 ts_code / 日期**，用 `params=` 传参，避免 SQL 注入 + DuckDB 解析抖动。
+- **只读视图**（`mv_*`）优于原始表（`raw_*`）：视图已做单位统一（vol×100 → 股，amount×1000 → 元，qfq 公式）和多源融合。
+- **跨日/跨股操作尽量让 DuckDB 做**（窗口函数、滚动、QUALIFY），不要拉到 pandas 再用 `groupby().rolling()`，Ducker 谓词下推 + 列裁剪性能差 10-100×。
+
+### 11.3 可用视图清单（截至 v0.6）
+
+| 视图 | 主键 | 用途 | DoD 引用 |
+|------|------|------|----------|
+| `mv_daily_v1` | `(ts_code, trade_date)` | 多源融合骨架（tushare ∪ akshare 字段对齐），**生产 SQL 别用这个** | Week 1 |
+| `mv_daily_qfq` | `(ts_code, trade_date)` | 前复权 OHLCV + `close_qfq`（Portfolio 选股 / 价量研究） | Week 1 |
+| `mv_daily_hfq` | `(ts_code, trade_date)` | 后复权 OHLCV + `close_hfq`（Risk 累计收益 / 回测） | Week 1 |
+| `mv_trade_cal` | `(exchange, cal_date)` | 交易日 / 调仓日 / T+1 对齐 | Week 1 |
+| `raw_tushare_daily` | `(ts_code, trade_date)` | 不复权原始行情（停牌 / 涨跌停判定用 `high==low && vol==0`） | Week 1 |
+| `raw_tushare_adj_factor` | `(ts_code, trade_date)` | 复权因子（验证 qfq/hfq 计算用，不要直接做选股） | Week 1 |
+| `raw_tushare_daily_basic` | `(ts_code, trade_date)` | `turnover_rate / pe / pb / total_mv / circ_mv`（Portfolio 价值/流动性因子） | Week 1 |
+| `raw_tushare_stock_basic` | `ts_code` | 股票池过滤：`list_status='L'/'D'/'P'`、`delist_date` 截止 | Week 1 |
+| `raw_tushare_trade_cal` | `(exchange, cal_date)` | 全部日历（含休市），`is_open=1` 才是交易日 | Week 1 |
+
+### 11.4 数据质量门禁
+
+每次 Portfolio/Risk 输出必须在 comment 报告：
+- 股票池大小（start/end 数量是否一致，是否有中途退市）
+- 关键字段缺失率（`close_qfq` / `pe` / `circ_mv` 应为 0）
+- 时间区间（是否覆盖研究窗口）
+- 复权口径（前复权 / 后复权 / 不复权，公式引用 v0.4 §5）
+- 停牌/涨跌停跳过数量（Risk 必报）
+
+### 11.5 已知限制（v0.6）
+
+- **沪深 300 成分股未精确化**：当前 Risk agent 用「全 A active(L) + list_date ≥ 2010 + 剔除 ST/退市」近似，等 Wind/聚宽接入（§12.4）后单独开 issue 替换。
+- **行业 / 风格中性化未在视图层做**：Portfolio agent 自行在 SQL 或 pandas 层做行业映射。
+- **分钟线 / tick 未接入**：v0.6 只覆盖日线；分钟线需要 tushare 单独捐助（~1000 元/年起）并单独开 issue。
+
+## 12. 新数据源 Contribution Guide
+
+> 适用对象：后续接入 Wind / 聚宽 / Choice / 自建 CSV / DBF 等新源时，按本节步骤"复制 + 改 50 行 + 注册 1 行"，Portfolio/Risk 不动。
+
+### 12.1 五步接入法
+
+```
+新数据源接入 = 复制 _template → 写 schema → 注册 SOURCES → 补 view → 加测试
+                                       (5 行)        (可选, 仅新表)  (~30 行)
+```
+
+每步详解：
+
+**Step 1：复制模板**
+```bash
+cp quant_data/sources/_template.py quant_data/sources/wind.py
+```
+
+**Step 2：填 50 行**
+
+| 字段 | 说明 | 例子 |
+|------|------|------|
+| `name` | 唯一短码 | `"wind"` |
+| `version` | adapter 自版本 | `"1.0.0"` |
+| `capabilities` | 支持的 topic 集合 | `{"daily", "adj_factor", "fina"}` |
+| `rate_limit()` | 上游文档限频 | `RateLimit(requests_per_min=400, notes="wind-doc")` |
+| `healthcheck()` | 廉价探活 | `self._client.ping()` |
+| `fetch(topic, **params)` | 实际拉取；必须返回与对应 `TableSchema` 字段名一致的 DataFrame | 见 §5 字段口径 |
+
+**Step 3：注册（一行）**
+
+```python
+# quant_data/registry.py
+def _build_default_sources() -> dict[str, object]:
+    return {
+        "tushare": TushareAdapter(pro_token=token, tier=2000),
+        "wind": WindAdapter(endpoint=os.getenv("WIND_ENDPOINT"), ...),  # ← 新加这一行
+    }
+```
+
+**Step 4：写 schema（仅当引入新表）**
+
+- 复用现有 5 张表 → 跳过本步
+- 引入新 topic（如 `fina` / `index_daily`）→ 在 `quant_data/schemas/<topic>_v1.py` 写 `TableSchema` 实例，并在 `quant_data/schemas/__init__.py` 的 `SCHEMAS` dict 注册
+
+**Step 5：DuckDB view 增量补一节（多源融合场景）**
+
+如果新源是**同 topic 增量补充**（如 wind 的 daily 字段比 tushare 多几个）→ 改 `quant_data/views/mv_daily_v1.sql`，加 `LEFT JOIN` + `COALESCE`；下游视图 `mv_daily_qfq` 不动（v0.4 §3.3）。
+
+如果新源是**新 topic**（如 `fina`）→ 新建 `quant_data/views/mv_fina_v1.sql`，在 `DuckDBStore.bootstrap_views()` 自动拾取（`view_dir.glob("*.sql")`）。
+
+**Step 6：测试**
+
+```python
+# tests/test_registry.py 加一例
+def test_wind_adapter_healthcheck(monkeypatch):
+    monkeypatch.setenv("WIND_ENDPOINT", "ws://mock")
+    register_source("wind", WindAdapter(endpoint="ws://mock"))
+    assert get_source("wind").healthcheck() is True
+```
+
+`test_registry.py` 现有用例已覆盖"注册新源不改 Portfolio/Risk 代码"——加新源后跑一遍全绿即可。
+
+### 12.2 字段口径差异处理
+
+新源字段名/单位与 tushare 不一致时，**不要在 SQL 层做转换**，改在 `TableSchema.source_mapping`：
+
+```python
+# quant_data/schemas/daily_v1.py
+DAILY_V1 = TableSchema(
+    table="daily", version="v1",
+    primary_key=["ts_code", "trade_date"],
+    fields={"open": FieldSpec("open", "float64", "yuan", ...), ...},
+    source_mapping={
+        "tushare": {"open": "open", "vol": "vol", "amount": "amount"},
+        "wind":    {"open": "open", "vol": "volume", "amount": "amt"},  # ← wind 用 volume/amt
+    },
+)
+```
+
+`TushareAdapter` 读自己的 `source_mapping["tushare"]`，未来的 `WindAdapter` 读 `source_mapping["wind"]`；SQL 层一律用规范名（`open`/`vol`/`amount`）。
+
+### 12.3 DoD 清单（接入新源必跑）
+
+- [ ] `tests/test_registry.py` 加新源用例全绿
+- [ ] `quant_data/sources/<name>.py` 不引入 tushare / akshare 反向依赖
+- [ ] `docs/data-localization.md` §6.2 表格加一行（新源 + 限频 + 备注）
+- [ ] `docs/data-localization.md` §3.2 核心表加新源写入路径
+- [ ] 跑 `make sync-full` 验证不破坏 5 表游标
+- [ ] `multica-memory` hot tier 记一条 L1 经验（限频 / 字段差异 / 健康检查）
+
+### 12.4 接入 Wind / 聚宽 dry-run 步骤（不实跑，写清单）
+
+仅作路线图，不在本 issue 实施。
+
+**Wind 接入（假设万得终端 + WindPy SDK）**：
+1. `pip install WindPy`（仅 Windows；macOS 用 `pip install windpy-sim`）
+2. `quant_data/sources/wind.py` 复制 `_template.py`，`fetch()` 内调 `w.wsd("000001.SZ", "open,high,low,close,volume,amt", start, end, ...)`
+3. `rate_limit = RateLimit(requests_per_min=400, notes="wind-doc-2024")`
+4. `source_mapping = {"wind": {"vol": "volume", "amount": "amt"}}`
+5. 写 schema 注册 `WIND_DAILY_V1 = TableSchema(...)`（**新表**，与 DAILY_V1 并存）
+6. DuckDB 视图 `mv_daily_wind_v1` 单源视图（v0.4 §3.3 多源融合 v2 时再考虑合表）
+
+**聚宽接入（jqdatasdk）**：
+1. `pip install jqdatasdk` + 账号认证
+2. `quant_data/sources/joinquant.py` 复制 `_template.py`，`fetch()` 调 `jq.get_price(...)`
+3. `rate_limit = RateLimit(requests_per_min=200, notes="jq-pro-2024")`（聚宽 Pro 文档）
+4. `source_mapping = {"joinquant": {"vol": "volume", "amount": "money"}}`
+5. 同上
+
+**CSV / DBF 自建源**：
+1. `quant_data/sources/csv.py`，`fetch()` 用 `pd.read_csv()` 即可
+2. 限频 = 0（本地读），`RateLimit(requests_per_min=10**9, notes="local-fs")`
+3. 主键按文件结构写 schema，注意 timezone（CSV 通常是字符串日期，schema 注册 `dtype="date32"`，adapter 负责 `pd.to_datetime()`）
+
+### 12.5 接入新源 = Portfolio/Risk 零改动
+
+验证方法（Week 3 [ADM-611](mention://issue/c4d7e577-5bbe-40a9-8888-90274b4ee5ff) DoD 第 6 项落地后跑一次）：
+
+```bash
+git diff --stat HEAD~10 -- quant_portfolio/ quant_risk/   # 新源 commit 前后, 这两个目录应该 0 行变更
+pytest tests/test_portfolio_factor.py tests/test_risk_backtest.py  # 全绿
+```
 
 ## 10. 参考资料
 
