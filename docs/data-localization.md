@@ -2,9 +2,10 @@
 
 > 适用范围：quant-meta-team 三 agent 协作（Data → Portfolio → Risk）。
 > 维护：quant-orchestrator；落地执行：quant-data-agent。
-> 状态：**v0.4**（已对齐用户指令：**本地优先暂存**，迁移到 `RSS_DATA` 外挂盘时只需改 `DATA_DIR` env；降级策略放宽；Week 1 已派发）。
+> 状态：**v0.5**（Week 1 验收通过：5 表 schema + DuckDB 视图骨架 + 46/46 测试 / 84% coverage 全部就位；3 张表游标已到 2024-01+，剩 1.5-2.5 年补全 + daily_basic 整体重做 + APScheduler 派给 [ADM-608](mention://issue/9c768f56-cf61-4670-818a-cf1c852acceb)）。
 >
 > **变更记录**：
+> - v0.5 (2026-06-05)：Week 1 验收 (ADM-606 done) —— 5 表 schema + DuckDB 视图 (mv_daily_v1/qfq/hfq/trade_cal) + 46/46 测试 84% coverage；3 表游标到 2024-01+，daily_basic 因 RateLimit 抛错中断在 2010-01-04；Week 2 (ADM-608) 派发：补全 3 表 + 修 daily_basic RateLimit backoff + APScheduler 17:30 + launchd plist 模板。
 > - v0.4 (2026-06-05)：按用户 19:12 指令改为**本地优先**——`DATA_DIR` 默认 `~/Code/quant-meta-team/quant_data/data`（项目仓库内，方便一起版本化/迁移），外置盘 `/Volumes/RSS_DATA/quant_data` 作为后续迁移目标；降级策略由 `blocked + @mention` 放宽为 `warn + 本地落盘 + 一次 mention`；新增 §6.6 显式迁移清单（rsync / rename / 重启调度）。
 > - v0.3 (2026-06-05)：外挂硬盘约定对齐 `~/news-rss`——卷标 `RSS_DATA`，根目录 `/Volumes/RSS_DATA/quant_data`；补充 rss 项目的实际探活结果（卷当前**未挂载**）。
 > - v0.2 (2026-06-05)：按用户反馈调整——tushare 升级为 2000 积分档；存储路径改为外挂硬盘 + `DATA_DIR` 配置；统一抽象层升级为**注册表 + Schema 版本化**模式，为后续多源接入做准备。
