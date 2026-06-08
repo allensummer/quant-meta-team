@@ -1,0 +1,26 @@
+# secrets
+.env
+
+# data (tracked separately / relocated to DATA_DIR)
+quant_data/data/
+*.duckdb
+*.parquet
+
+# venv
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+htmlcov/
+
+# logs
+logs/
+
+# python build artifacts
+*.egg-info/
+build/
+dist/
+
+# dev scaffolding (one-time codegen/build/debug tools)
+scripts/_*.py

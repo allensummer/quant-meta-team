@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  com.quant.data.sync.plist — macOS launchd template for the quant_data 17:30 sync
+  (v0.5 §4.4 / §8 Week 2).
+
+  This file is a TEMPLATE; the real working copy should be installed to
+    ~/Library/LaunchAgents/com.quant.data.sync.plist
+  after `make install-launchd`. We use StartCalendarInterval (17:30 weekday)
+  + RunAtLoad=false so the agent only fires on the schedule.
+
+  launchd will not inherit the user's shell environment. We inject PATH +
+  TUSHARE_TOKEN + DATA_DIR + LOG_DIR via the EnvironmentVariables dict.
+
+  Failure handling
+  ----------------
+  KeepAlive=false (we don't want launchd to thrash on a bad sync).
+  StandardOutPath / StandardErrorPath  ->  ~/Code/quant-meta-team/logs/launchd.out.log
+                                          ~/Code/quant-meta-team/logs/launchd.err.log
+  Exit code != 0 is recorded by launchd in ~/Library/Logs/launchd.* — we rely
+  on `make report` to introspect sync_state and the on-disk lineage JSONs.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.quant.data.sync</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/allenwang/Code/quant-meta-team/.venv/bin/python</string>
+        <string>-m</string>
+        <string>quant_data.cli</string>
+        <string>run-once</string>
+        <string>--lookback</string>
+        <string>1</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/allenwang/Code/quant-meta-team</string>
+
+    <!-- 17:30, weekdays only. Repeat for every Mon-Fri to avoid relying on
+         launchd's calendar quirks across macOS versions. -->
+    <key>StartCalendarInterval</key>
+    <array>
+        <dict><key>Weekday</key><integer>1</integer><key>Hour</key><integer>17</integer><key>Minute</key><integer>30</integer></dict>
+        <dict><key>Weekday</key><integer>2</integer><key>Hour</key><integer>17</integer><key>Minute</key><integer>30</integer></dict>
+        <dict><key>Weekday</key><integer>3</integer><key>Hour</key><integer>17</integer><key>Minute</key><integer>30</integer></dict>
+        <dict><key>Weekday</key><integer>4</integer><key>Hour</key><integer>17</integer><key>Minute</key><integer>30</integer></dict>
+        <dict><key>Weekday</key><integer>5</integer><key>Hour</key><integer>17</integer><key>Minute</key><integer>30</integer></dict>
+    </array>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>KeepAlive</key>
+    <false/>
+
+    <!-- launchd kills the process after this many seconds of wall-clock.
+         Sync of 5 tables finishes well under 5 minutes; cap at 30 to avoid
+         runaway sleeps. -->
+    <key>ExitTimeOut</key>
+    <integer>1800</integer>
+
+    <key>StandardOutPath</key>
+    <string>/Users/allenwang/Code/quant-meta-team/logs/launchd.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/allenwang/Code/quant-meta-team/logs/launchd.err.log</string>
+
+    <!-- Environment: launchd does NOT inherit the shell, so we spell out
+         everything the .env file would set. The token is taken from the
+         user's login keychain in production; for the template, the user
+         must edit this before `launchctl load`. -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/Users/allenwang/Code/quant-meta-team/.venv/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <key>HOME</key>
+        <string>/Users/allenwang</string>
+        <key>TUSHARE_TOKEN</key>
+        <string>__FILL_ME_FROM_KEYCHAIN__</string>
+        <key>DATA_DIR</key>
+        <string>/Users/allenwang/Code/quant-meta-team/quant_data/data</string>
+        <key>LOG_DIR</key>
+        <string>/Users/allenwang/Code/quant-meta-team/logs</string>
+        <key>PYTHONUNBUFFERED</key>
+        <string>1</string>
+    </dict>
+</dict>
+</plist>

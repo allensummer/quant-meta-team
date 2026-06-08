@@ -1,0 +1,48 @@
+"""Schema for ``daily_basic`` (tushare `pro.daily_basic`) — v1."""
+from quant_data.sources.base import FieldSpec, TableSchema
+
+DAILY_BASIC_V1 = TableSchema(
+    table="daily_basic",
+    version="v1",
+    primary_key=["ts_code", "trade_date"],
+    fields={
+        "ts_code": FieldSpec("ts_code", "string", "code", nullable=False),
+        "trade_date": FieldSpec("trade_date", "date", "calendar", nullable=False),
+        "turnover_rate": FieldSpec("turnover_rate", "float64", "percent", nullable=True),
+        "turnover_rate_f": FieldSpec("turnover_rate_f", "float64", "percent", nullable=True),
+        "volume_ratio": FieldSpec("volume_ratio", "float64", "ratio", nullable=True),
+        "pe": FieldSpec("pe", "float64", "ratio", nullable=True),
+        "pe_ttm": FieldSpec("pe_ttm", "float64", "ratio", nullable=True),
+        "pb": FieldSpec("pb", "float64", "ratio", nullable=True),
+        "ps": FieldSpec("ps", "float64", "ratio", nullable=True),
+        "ps_ttm": FieldSpec("ps_ttm", "float64", "ratio", nullable=True),
+        "dv_ratio": FieldSpec("dv_ratio", "float64", "percent", nullable=True),
+        "dv_ttm": FieldSpec("dv_ttm", "float64", "percent", nullable=True),
+        "total_share": FieldSpec("total_share", "float64", "share", nullable=True),
+        "float_share": FieldSpec("float_share", "float64", "share", nullable=True),
+        "free_share": FieldSpec("free_share", "float64", "share", nullable=True),
+        "total_mv": FieldSpec("total_mv", "float64", "yuan", nullable=True),
+        "circ_mv": FieldSpec("circ_mv", "float64", "yuan", nullable=True),
+    },
+    source_mapping={
+        "tushare": {
+            "ts_code": "ts_code",
+            "trade_date": "trade_date",
+            "turnover_rate": "turnover_rate",
+            "turnover_rate_f": "turnover_rate_f",
+            "volume_ratio": "volume_ratio",
+            "pe": "pe",
+            "pe_ttm": "pe_ttm",
+            "pb": "pb",
+            "ps": "ps",
+            "ps_ttm": "ps_ttm",
+            "dv_ratio": "dv_ratio",
+            "dv_ttm": "dv_ttm",
+            "total_share": "total_share",
+            "float_share": "float_share",
+            "free_share": "free_share",
+            "total_mv": "total_mv",
+            "circ_mv": "circ_mv",
+        },
+    },
+)

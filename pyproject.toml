@@ -1,0 +1,52 @@
+[project]
+name = "quant-data"
+version = "0.4.0"
+description = "A-share data localization: tushare primary, akshare backup, Parquet+DuckDB store, multi-source pluggable"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "tushare>=1.4.20",
+    "akshare>=1.16.0",
+    "duckdb>=1.0.0",
+    "pyarrow>=15.0.0",
+    "sqlalchemy>=2.0.0",
+    "apscheduler>=3.10.0",
+    "python-dotenv>=1.0.0",
+    "click>=8.0.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0.0", "pytest-cov>=5.0.0"]
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["quant_data*", "quant_risk*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]
+
+[tool.coverage.run]
+# quant_risk/examples/ is a CLI entrypoint (run with `python -m ...`),
+# not library code — exclude it from the coverage gate.
+source = ["quant_risk"]
+omit = [
+    "quant_risk/examples/*",
+    "quant_risk/__init__.py",
+]
+
+[tool.coverage.report]
+# Risk-agent gate: 80% on library code (per issue ADM-613).
+fail_under = 80
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+]
