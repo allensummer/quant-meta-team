@@ -13,9 +13,11 @@ python3 -m venv .venv
 cp .env.example .env       # then fill TUSHARE_TOKEN
 ```
 
-`DATA_DIR` is **optional** — leave it unset to use the project-local default
-`~/Code/quant-meta-team/quant_data/data`. Set it to `/Volumes/RSS_DATA/quant_data`
-when migrating to the external drive (see `docs/data-localization.md` §6.6).
+`DATA_DIR` defaults to the external drive `/Volumes/RSS_DATA/quant_data`
+(active since 2026-06-11). Leave it unset to fall back to the project-local
+`~/Code/quant-meta-team/quant_data/data` (see `docs/data-localization.md` §6.5 + §6.6
+for migration SOP). If the external drive is unmounted, `paths.py` falls back to
+local and emits a warning — it never silently writes to the wrong place.
 
 ## Quickstart
 

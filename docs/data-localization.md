@@ -2,9 +2,10 @@
 
 > 适用范围：quant-meta-team 三 agent 协作（Data → Portfolio → Risk）。
 > 维护：quant-orchestrator；落地执行：quant-data-agent。
-> 状态：**v0.6**（Week 2 验收通过：5 表游标全部 ≥ 2026-06-05、APScheduler 17:30 + launchd 模板就位、58/58 测试 / 83.4% coverage；Week 3 [ADM-611](mention://issue/c4d7e577-5bbe-40a9-8888-90274b4ee5ff) 已派发 — Portfolio/Risk 切 DuckDB + 并发读验证 + 下游接入文档）。
+> 状态：**v0.7**（2026-06-11 数据已迁移至 `RSS_DATA` 外置盘 —— `/Volumes/RSS_DATA/quant_data`，共 3.9 GB；DuckDB SHA256 与迁移前一致、5 表行数一致、5 cursors 全部 `last_trade_date=2026-06-05 status=ok`；旧本地数据已重命名为 `quant_data/data.local-bak-20260611` 保留 1 周观察期；`.env` / `.env.example` / launchd plist 模板 / README 的 DATA_DIR 已切到 RSS_DATA）。
 >
 > **变更记录**：
+> - v0.7 (2026-06-11)：数据迁移至外置盘 RSS_DATA。步骤按 v0.4 §6.6 SOP 执行 — rsync 本地 → RSS_DATA；DuckDB SHA256 比对一致 + 5 表行数一致 + sync_state 5 cursors 全部 `2026-06-05 / ok`；旧目录重命名为 `data.local-bak-20260611`（保留 1 周）；`.env`（不入仓）/ `.env.example` / `config/launchd/com.quant.data.sync.plist` / `README.md` 的 `DATA_DIR` 全部更新为 `/Volumes/RSS_DATA/quant_data`；路径发现（§6.5）行为不变——DATA_DIR 未设走本地默认，指向 `/Volumes/...` 但卷未挂载走 `warn + 本地回退`。
 > - v0.6 (2026-06-05)：Week 2 验收 (ADM-608 done) —— 5 表游标全部 2026-06-05、APScheduler 17:30 + launchd 模板 + 58/58 测试 83.4% coverage；Week 3 (ADM-611) 派发 — A: Portfolio 切 DuckDB + 动量/反转样例 / B: Risk 切 DuckDB + 月频回测 / C: 多 agent 并发读验证（v0.4 §9.6 #6）/ D: 下游接入指南 + 新源 contribution guide（§11 + §12 + README 章节）。
 > - v0.5 (2026-06-05)：Week 1 验收 (ADM-606 done) —— 5 表 schema + DuckDB 视图 (mv_daily_v1/qfq/hfq/trade_cal) + 46/46 测试 84% coverage；3 表游标到 2024-01+，daily_basic 因 RateLimit 抛错中断在 2010-01-04；Week 2 (ADM-608) 派发：补全 3 表 + 修 daily_basic RateLimit backoff + APScheduler 17:30 + launchd plist 模板。
 > - v0.4 (2026-06-05)：按用户 19:12 指令改为**本地优先**——`DATA_DIR` 默认 `~/Code/quant-meta-team/quant_data/data`（项目仓库内，方便一起版本化/迁移），外置盘 `/Volumes/RSS_DATA/quant_data` 作为后续迁移目标；降级策略由 `blocked + @mention` 放宽为 `warn + 本地落盘 + 一次 mention`；新增 §6.6 显式迁移清单（rsync / rename / 重启调度）。
@@ -294,9 +295,10 @@ def data_dir() -> Path:
 - `DATA_DIR` 显式设为 `/Volumes/...` 但挂载缺失 → `warn` + 回退本地 + `sync_report` comment 里 **@mention 用户一次**；不阻塞（之前是 `blocked`，本地优先阶段已无意义）。
 - 永远不静默写到与 `DATA_DIR` 不同的目录。
 
-### 6.6 后续迁移到外置盘 `RSS_DATA` 的步骤
+### 6.6 迁移到外置盘 `RSS_DATA` 的步骤
 
-触发条件：本地数据 >50 GB 或本机 SSD 空间吃紧时迁移。**所有步骤停 scheduler，期间不写**：
+> **状态（v0.7，2026-06-11）**：迁移已完成。`DATA_DIR` 已切到 `/Volumes/RSS_DATA/quant_data`，本地旧数据保留在 `quant_data/data.local-bak-20260611` 观察 1 周。
+> 触发条件：本地数据 >50 GB 或本机 SSD 空间吃紧时迁移。**所有步骤停 scheduler，期间不写**：
 
 ```bash
 # 0. 停调度（手动 / autopilot 关掉）
@@ -308,9 +310,39 @@ rsync -avh --progress \
 # 3. 验证：行数 / checksum
 duckdb -c "SELECT count(*) FROM read_parquet('/Volumes/RSS_DATA/quant_data/raw_tushare_daily/**/*.parquet')"
 # 4. 改 env：.env 里 DATA_DIR=/Volumes/RSS_DATA/quant_data
-# 5. 重启 scheduler；首轮跑 test_external_drive.py 验证挂载存在
-# 6. 旧本地目录暂留 1 周观察期后删除（避免误删恢复成本）
+# 5. **重建视图（关键）**：rsync 只复制 .duckdb 文件，但视图 SQL 体内 read_parquet(...) 的 glob
+#    路径是 init 时烘焙的，指向旧 DATA_DIR。必须重跑 bootstrap_views 让视图指向新路径。
+DATA_DIR=/Volumes/RSS_DATA/quant_data .venv/bin/python -c \
+  "from quant_data.store.duckdb_store import DuckDBStore; DuckDBStore().bootstrap_views()"
+# 6. 验证：cli report 中 view_rows 全是 int（不是 "err: IO Error..."）
+DATA_DIR=/Volumes/RSS_DATA/quant_data .venv/bin/python -m quant_data.cli report
+# 7. 重启 scheduler；首轮跑 test_external_drive.py + test_view_paths_align_with_data_dir.py 验证挂载
+.venv/bin/pytest tests/test_external_drive.py tests/test_view_paths_align_with_data_dir.py -v
+# 8. 旧本地目录暂留 1 周观察期后删除（避免误删恢复成本）
 ```
+
+**踩坑（v0.7 现场发现）**：第 5 步的视图重建**不是可选项**。``bootstrap_views`` 创建视图时把 ``@<topic>_tushare@`` 占位符替换成 ``read_parquet('<DATA_DIR>/raw_tushare_<topic>/**/*.parquet')`` 并 ``CREATE VIEW`` 进 ``quant.duckdb``，从那一刻起路径就**被烘焙在 view body 里**了。``rsync -a`` 是文件级 copy，只搬字节，不动 view SQL。所以第 6 步 ``cli report`` 会出现：
+
+```json
+"view_rows": {
+  "mv_daily_v1": "err: IO Error: No files found that match the pattern \"/Users/.../old path.../raw_tushare_daily/**/*.parquet\"",
+  ...
+}
+```
+
+旧路径的 parquet 已经搬走 / 归档了，自然 IO 错误。修法就是第 5 步重跑 ``bootstrap_views``（用 ``CREATE OR REPLACE VIEW`` 把所有 mv_ 视图替换为新路径）。回归测试 ``tests/test_view_paths_align_with_data_dir.py`` 已就位，未来 ``cli report view_rows`` 出现 ``err:`` 字符串会立刻 fail。
+
+**v0.7 实际执行回执**：
+
+| 步骤 | 命令 | 证据 |
+|---|---|---|
+| 0. 确认 RSS_DATA 挂载 | `ls /Volumes/RSS_DATA` | `RSS_DATA/` 出现（APFS 卷，466 GiB，1% 已用） |
+| 1. 落盘前快照 | `quant_data/.pre_migration_snapshot.json` | 5 表行数 / DuckDB SHA256 / sync_state 5 行 |
+| 2. rsync | `rsync -a ~/Code/quant-meta-team/quant_data/data/ /Volumes/RSS_DATA/quant_data/` | 3.9 GB / exit 0 |
+| 3. 比对 | SHA256 一致、5 表行数一致、5 cursors 全部 `2026-06-05 / ok` | 迁移后 report 见 §v0.7 |
+| 4. 改 env | `.env.example` / `.env` / launchd plist / README 全部 DATA_DIR 切到 RSS_DATA | 4 文件已改 |
+| 5. cli 验证 | `DATA_DIR=/Volumes/RSS_DATA/quant_data python -m quant_data.cli report` | `data_dir` = RSS_DATA，5 cursors ok |
+| 6. 旧目录归档 | `mv quant_data/data quant_data/data.local-bak-20260611` | 3.9 GB 保留，1 周后未异常再 `rm -rf` |
 
 > 注意：`/Volumes/...` 路径在 macOS 休眠唤醒后可能掉，scheduler 重启时按 §6.5 降级策略走「回退本地 + 一次 mention」。
 

@@ -3,6 +3,7 @@
 
 # data (tracked separately / relocated to DATA_DIR)
 quant_data/data/
+quant_data/data.local-bak-*/
 *.duckdb
 *.parquet
 

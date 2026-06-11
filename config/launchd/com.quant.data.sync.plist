@@ -79,7 +79,7 @@
         <key>TUSHARE_TOKEN</key>
         <string>__FILL_ME_FROM_KEYCHAIN__</string>
         <key>DATA_DIR</key>
-        <string>/Users/allenwang/Code/quant-meta-team/quant_data/data</string>
+        <string>/Volumes/RSS_DATA/quant_data</string>
         <key>LOG_DIR</key>
         <string>/Users/allenwang/Code/quant-meta-team/logs</string>
         <key>PYTHONUNBUFFERED</key>
