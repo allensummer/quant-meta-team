@@ -25,3 +25,6 @@ dist/
 
 # dev scaffolding (one-time codegen/build/debug tools)
 scripts/_*.py
+
+# internal codegen / pipeline scratch (consumed by reports; not part of deliverable)
+docs/.internal/
