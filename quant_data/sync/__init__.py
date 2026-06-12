@@ -1,4 +1,4 @@
-"""Sync layer (v0.4 §4.1-§4.4). One entry per table."""
+"""Sync layer (v0.4 §4.1-§4.4, expanded v0.8 with 5 S-tier topics — ADM-652)."""
 from quant_data.sync.driver import (
     sync_table,
     sync_stock_basic,
@@ -6,7 +6,21 @@ from quant_data.sync.driver import (
     sync_daily,
     sync_adj_factor,
     sync_daily_basic,
+    sync_moneyflow,
+    sync_moneyflow_hsgt,
+    sync_hsgt_top10,
+    sync_index_weight,
+    sync_fund_holdings,
     sync_full,
+)
+from quant_data.sync.backfill import (
+    backfill_20y,
+    backfill_one_table,
+    backfill_stock_basic_snapshot,
+    snapshot_cursors,
+    restore_cursors,
+    DEFAULT_BACKFILL_START,
+    EARLIEST_HARD_FLOOR,
 )
 
 __all__ = [
@@ -16,5 +30,17 @@ __all__ = [
     "sync_daily",
     "sync_adj_factor",
     "sync_daily_basic",
+    "sync_moneyflow",
+    "sync_moneyflow_hsgt",
+    "sync_hsgt_top10",
+    "sync_index_weight",
+    "sync_fund_holdings",
     "sync_full",
+    "backfill_20y",
+    "backfill_one_table",
+    "backfill_stock_basic_snapshot",
+    "snapshot_cursors",
+    "restore_cursors",
+    "DEFAULT_BACKFILL_START",
+    "EARLIEST_HARD_FLOOR",
 ]

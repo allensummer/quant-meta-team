@@ -1,0 +1,87 @@
+{
+  "batch": "batch2",
+  "topics_in_batch": 7,
+  "sync_started": "2026-06-12T13:21:39.576672",
+  "range_start": "2024-01-02",
+  "range_end": "2024-01-05",
+  "total_elapsed_s": 127.12,
+  "topics_ok": 7,
+  "topics_failed": 0,
+  "topics_blocked": 0,
+  "total_rows_persisted": 496,
+  "per_topic": [
+    {
+      "topic": "tushare_fina_indicator",
+      "rows": 59,
+      "batches": 52,
+      "last_date": "2024-03-31",
+      "elapsed_s": 7.84,
+      "rate_limit_hit": 0,
+      "status": "ok"
+    },
+    {
+      "topic": "tushare_income",
+      "rows": 64,
+      "batches": 52,
+      "last_date": "2024-03-31",
+      "elapsed_s": 6.69,
+      "rate_limit_hit": 0,
+      "status": "ok"
+    },
+    {
+      "topic": "tushare_balancesheet",
+      "rows": 62,
+      "batches": 52,
+      "last_date": "2024-03-31",
+      "elapsed_s": 7.81,
+      "rate_limit_hit": 0,
+      "status": "ok"
+    },
+    {
+      "topic": "tushare_cashflow",
+      "rows": 78,
+      "batches": 52,
+      "last_date": "2024-03-31",
+      "elapsed_s": 45.29,
+      "rate_limit_hit": 0,
+      "status": "ok"
+    },
+    {
+      "topic": "tushare_fina_mainbz",
+      "rows": 0,
+      "batches": 52,
+      "last_date": "2024-03-31",
+      "elapsed_s": 6.21,
+      "rate_limit_hit": 0,
+      "status": "ok"
+    },
+    {
+      "topic": "tushare_fina_audit",
+      "rows": 0,
+      "batches": 52,
+      "last_date": "2024-03-31",
+      "elapsed_s": 7.84,
+      "rate_limit_hit": 0,
+      "status": "ok"
+    },
+    {
+      "topic": "tushare_top10_holders",
+      "rows": 233,
+      "batches": 52,
+      "last_date": "2024-03-31",
+      "elapsed_s": 45.44,
+      "rate_limit_hit": 0,
+      "status": "ok"
+    }
+  ],
+  "a_tier_aggregate": {
+    "token_tier": 2000,
+    "rate_limit_ceiling_per_min": 200,
+    "rate_limit_hits_total": 0,
+    "rows_persisted_in_batch": 496,
+    "topics_total": 7,
+    "topics_working": 7,
+    "topics_blocked_by_tier": 0,
+    "topics_failed": 0
+  }
+}

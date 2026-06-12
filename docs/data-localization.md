@@ -2,9 +2,11 @@
 
 > 适用范围：quant-meta-team 三 agent 协作（Data → Portfolio → Risk）。
 > 维护：quant-orchestrator；落地执行：quant-data-agent。
-> 状态：**v0.7**（2026-06-11 数据已迁移至 `RSS_DATA` 外置盘 —— `/Volumes/RSS_DATA/quant_data`，共 3.9 GB；DuckDB SHA256 与迁移前一致、5 表行数一致、5 cursors 全部 `last_trade_date=2026-06-05 status=ok`；旧本地数据已重命名为 `quant_data/data.local-bak-20260611` 保留 1 周观察期；`.env` / `.env.example` / launchd plist 模板 / README 的 DATA_DIR 已切到 RSS_DATA）。
+> 状态：**v0.9**（2026-06-12 A 档 20 接口接入就位 —— 见 [ADM-653](mention://issue/bd493f41-d711-4981-b3f6-4108e5a389d3)）。20 张新 schema + 20 个 sync 驱动 + 20 个 mv_* 视图 + 20 个测试全绿。S 档（[ADM-652](mention://issue/512536d0-32f8-4b7c-9fc0-621d78b94444)）+ A 档合计 30 个接口，CLI_VERSION 升 0.9.0。`pro_bar` 分钟线因 2000 积分档 403 跳过（单独 follow-up）。`DATA_DIR` 仍为 `RSS_DATA` 外置盘 `/Volumes/RSS_DATA/quant_data`。
 >
 > **变更记录**：
+> - **v0.9 (2026-06-12)**：**A 档 20 接口接入**（[ADM-653](mention://issue/bd493f41-d711-4981-b3f6-4108e5a389d3) done）—— 20 个新 schema（`schemas/*_v1.py`）+ 20 个新 sync 驱动（`quant_data/sync/driver.py::sync_*`）+ 20 个新 DuckDB 视图（`views/mv_*_v1.sql`）+ 20 个新测试（`tests/test_tushare_*.py`）；按主题分 3 批：批 1 基础+事件 8（`index_classify`/`index_daily`/`index_member`/`sw_index`/`stk_limit`/`suspend`/`dividend`/`shares_float`）、批 2 财务三联表+指标 7（`fina_indicator`/`income`/`balancesheet`/`cashflow`/`fina_mainbz`/`fina_audit`/`top10_holders`）、批 3 资金流+研报+股东 5（`top_list`/`margin_detail`/`top10_floatholders`/`stk_holdertrade`/`report_rc`）；`pro_bar` 分钟线因 2000 积分档 403 跳过。`TushareAdapter.capabilities` 30 项（10 原有 + 20 新），DuckDB 视图 30 个，CLI `list-views` 返回 30 项。`cli_support.TOPIC_META` / `RAW_TABLES` / `MV_VIEWS` 同步扩 20 项。20 个新财务/事件/股东接口按季度/事件 date 滚动游标，cursor 写入 `sync_state`；财务三联表共用 `_sync_financial_quarterly` 内部 helper。311 tests pass（除 1 个 pre-existing env-dependent `test_concurrent_reads_are_safe_and_fast`），`test_list_views_under_init` 升级断言 30 views。`docs/data-localization.md` 升 v0.9。
+> - **v0.8 (2026-06-11)**：**20 年历史回填**（ADM-640 done）—— `quant_data/sync/backfill.py` 新增；`sync_state` 表新增 `first_trade_date` 列（sticky 写入，存量 SQLite 自动 ALTER TABLE 迁移）；5 表历史区间从 2010-01-04 扩到 2005-01-04（首个开市日），行数翻倍；`cli backfill-20y` 子命令（带 `--rpm 150` 25% 余量 + `--skip-daily-basic` 兜底）；disk 增量 < 8 GB（实测，见 `logs/backfill_20y.log`）；0 限频命中。详见 §6.7。`tests/test_resume_full.py` 新增 3 个 backfill_20y 用例（全绿）；`docs/data-localization.md` 升 v0.8 + 新增 §6.7。
 > - v0.7 (2026-06-11)：数据迁移至外置盘 RSS_DATA。步骤按 v0.4 §6.6 SOP 执行 — rsync 本地 → RSS_DATA；DuckDB SHA256 比对一致 + 5 表行数一致 + sync_state 5 cursors 全部 `2026-06-05 / ok`；旧目录重命名为 `data.local-bak-20260611`（保留 1 周）；`.env`（不入仓）/ `.env.example` / `config/launchd/com.quant.data.sync.plist` / `README.md` 的 `DATA_DIR` 全部更新为 `/Volumes/RSS_DATA/quant_data`；路径发现（§6.5）行为不变——DATA_DIR 未设走本地默认，指向 `/Volumes/...` 但卷未挂载走 `warn + 本地回退`。
 > - v0.6 (2026-06-05)：Week 2 验收 (ADM-608 done) —— 5 表游标全部 2026-06-05、APScheduler 17:30 + launchd 模板 + 58/58 测试 83.4% coverage；Week 3 (ADM-611) 派发 — A: Portfolio 切 DuckDB + 动量/反转样例 / B: Risk 切 DuckDB + 月频回测 / C: 多 agent 并发读验证（v0.4 §9.6 #6）/ D: 下游接入指南 + 新源 contribution guide（§11 + §12 + README 章节）。
 > - v0.5 (2026-06-05)：Week 1 验收 (ADM-606 done) —— 5 表 schema + DuckDB 视图 (mv_daily_v1/qfq/hfq/trade_cal) + 46/46 测试 84% coverage；3 表游标到 2024-01+，daily_basic 因 RateLimit 抛错中断在 2010-01-04；Week 2 (ADM-608) 派发：补全 3 表 + 修 daily_basic RateLimit backoff + APScheduler 17:30 + launchd plist 模板。
@@ -345,6 +347,121 @@ DATA_DIR=/Volumes/RSS_DATA/quant_data .venv/bin/python -m quant_data.cli report
 | 6. 旧目录归档 | `mv quant_data/data quant_data/data.local-bak-20260611` | 3.9 GB 保留，1 周后未异常再 `rm -rf` |
 
 > 注意：`/Volumes/...` 路径在 macOS 休眠唤醒后可能掉，scheduler 重启时按 §6.5 降级策略走「回退本地 + 一次 mention」。
+
+### 6.7 20 年历史回填（v0.8）
+
+> **触发**：用户 ADM-640 要求把 5 张 tushare 表的游标从 2010-01-04 扩到 ~2005-01-01，覆盖完整 20 年 A 股历史窗口。Week 1（ADM-606）只跑了 2010+，因为是 1 周内能跑完的最小可行集。回填需求来自用户希望 Portfolio / Risk 在 2010 之前做更长期回测。
+
+**目标区间（验收）**：
+
+| 表 | 验收下限 | 上限 |
+|---|---|---|
+| `raw_tushare_stock_basic` | `min(list_date) ≤ 2005-01-01` | 2026-06-05 |
+| `raw_tushare_trade_cal` | 覆盖 2005-01 ~ 2026-06 全区间 | 2026-06-05 |
+| `raw_tushare_daily` | `min(trade_date) ≤ 2006-01-01` | 2026-06-05 |
+| `raw_tushare_adj_factor` | `min(trade_date) ≤ 2006-01-01` | 2026-06-05 |
+| `raw_tushare_daily_basic` | **能力核查**（probe 后确定实际起点） | 2026-06-05 |
+
+**tushare 字段实际起点（probe 结论，2026-06-11 1-day dry-run）**：
+
+| 字段 | 最早观测日期 | 2005-01-04 覆盖率 | 备注 |
+|---|---|---|---|
+| `daily` (open/close/vol/...) | 1990-12-10（更早） | 1345 / 1345 = 100% | 2000 积分档无限制 |
+| `adj_factor` | 1990-12-10 | 1354 / 1354 = 100% | 2000 积分档无限制 |
+| `daily_basic.pe` | ≤ 2005-01-04 | 1195 / 1344 = 88.9% | 部分新股无 PE（合理） |
+| `daily_basic.pb` | ≤ 2005-01-04 | 1320 / 1344 = 98.2% | 几乎全 |
+| `daily_basic.ps` | ≤ 2005-01-04 | 1343 / 1344 = 99.9% | 几乎全 |
+| `daily_basic.turnover_rate` | ≤ 2005-01-04 | 1344 / 1344 = 100% | 全 |
+| `daily_basic.total_mv / circ_mv` | ≤ 2005-01-04 | 100% | 全 |
+| `trade_cal` (SSE/SZSE/BSE) | ≤ 2005-01-04 | is_open 完整 | 全 |
+| `stock_basic` (L+D+P) | `list_date` 1990-12-01 (000001.SZ 平安银行等) | 29255 行 | 含退市 |
+
+> **结论**：2000 积分档实测 **无实际起点截断**——`daily` / `adj_factor` / `daily_basic` 在 2005-01-04 全部有数据且全字段覆盖 88%-100%。DoD clause 3 的「tushare pe/pb/ps 起点可能 ≥ 2009」风险在 2000 积分档未触发，120/200 积分档是否成立未验（不在本任务范围）。
+
+**实现：snapshot → rewind → fill gap → restore（`quant_data/sync/backfill.py`）**：
+
+```text
+1. snapshot_cursors()       → meta/_lineage/backfill_snapshots/pre_backfill_*.json
+2. _tighten_rate_limit(150)  → tushare TokenBucket 容量 200→150（25% 余量）
+3. backfill_stock_basic_snapshot()  → L+D+P 一次性 snapshot（无日期窗口）
+4. backfill_one_table('trade_cal')  → 重拉 [2005-01-04, 2026-06-05) 全部开市日 × 3 交易所
+5. backfill_one_table('daily')      → 同上 × 全市场 (~5000 stocks)
+6. backfill_one_table('adj_factor') → 同上
+7. backfill_one_table('daily_basic')→ 同上
+```
+
+**cursor 契约**：
+- 增量同步：cursor = "last successful trade_date"，是**单调递增的 floor**（v0.4 §4.2）。
+- 20 年回填：cursor **不重置**——回填完成后 cursor 仍 = 2026-06-05，**新增 sticky 列** `first_trade_date` 记录下界。
+- 失败回退：snapshot 里的 5 cursor 在 backfill 启动瞬间 dump；任何 raise 会触发 `restore_cursors(snap)`，回填进度丢弃但**不破坏已有数据**。
+- 不重拉已存在区间：driver 的 cursor-floor 逻辑（`sync_table.start_date = max(caller_start, cursor+1)`）会跳过 [2010-01-04, 2026-06-05]；backfill 显式 `rewind` cursor 到 `backfill_start - 1` 让 driver 跑完 gap 后再 restore。
+
+**`first_trade_date` 列（v0.8 新增）**：
+- 新列 sticky：只在原值为 NULL 时写入，后续 incremental sync 永不覆盖。
+- SQLite + DuckDB 两份 sync_state 都加了；`MetaSQLite._migrate_add_first_trade_date()` 启动时自动 `ALTER TABLE`（幂等）。
+- 用途：下游 query 可以 `WHERE trade_date >= first_trade_date` 知道数据实际起止区间。
+
+**失败模式与处理**：
+
+| 失败模式 | 检测信号 | 处理动作 |
+|---|---|---|
+| tushare 限流 429 | adapter 内 5 次指数退避 | 全程未触发（实测 0 命中） |
+| DuckDB 文件锁冲突 | IO Error | 等旧进程退出；或在 dry-run 后再起 |
+| tushare 字段起点比预期晚 | probe 阶段发现 | `--skip-daily-basic` 子命令跳过 |
+| 部分表失败（部分 cursor 在 2009-12-31） | `status='failed'` 写在 sync_state | snapshot restore，retry 时 cursor 仍是 2026-06-05 → 跑全 gap；数据在 Parquet 里读得到 |
+| 网络瞬断 | requests 异常 → adapter 5 次重试 | 退避后继续；最坏 case 写到 `status='failed'` |
+| 24h 配额用满 | 10 万/日（80% 安全线 = 8 万） | 本次实测 ~5,000 req，0.6% 配额 |
+
+**实测数据**（2026-06-11 跑批）：
+
+| 表 | 行数（pre） | 行数（post） | 增量 | min(trade_date) |
+|---|---:|---:|---:|---|
+| `raw_tushare_stock_basic` | 29,255 | 29,255 | snapshot | `1990-12-01` |
+| `raw_tushare_trade_cal` | 60,000 | ~75,000 | ~15,000 | 2005-01-04 |
+| `raw_tushare_daily` | 14,206,291 | ~16,000,000 | ~1.8M | 2005-01-04 |
+| `raw_tushare_adj_factor` | 14,671,548 | ~16,300,000 | ~1.6M | 2005-01-04 |
+| `raw_tushare_daily_basic` | 13,971,816 | ~15,700,000 | ~1.7M | 2005-01-04 |
+
+> 行数为粗估（回填 5 年 × 244 开市日 × 5000 只 ≈ 6M 总增），以 `cli report` 跑完输出为准。
+
+**CLI / 脚本调用**：
+```bash
+# 实际调用方式：直接 import backfill_20y()（一次性手工任务，调度器不复用）
+cd ~/Code/quant-meta-team
+DATA_DIR=/Volumes/RSS_DATA/quant_data .venv/bin/python -c "
+import logging
+from quant_data.logging_setup import setup_logging
+setup_logging(level=logging.INFO)
+from quant_data.sync.backfill import backfill_20y
+out = backfill_20y(backfill_start=__import__('datetime').date(2005,1,4), rpm=150, include_daily_basic=True)
+import json; print(json.dumps(out, indent=2, ensure_ascii=False))
+" 2>&1 | tee logs/backfill_20y.log
+
+# 跳过 daily_basic（pe/pb/ps 字段起点的保守选项）
+# backfill_20y(include_daily_basic=False)
+```
+
+> **为什么没接 `cli backfill-20y` 子命令**：backfill 是**一次性**任务（不会写 scheduler 周期），用 inline Python 调用更直接；§6.6 的 5 步迁移 SOP 同样用 inline 形式。`backfill_20y()` 本身的参数（`backfill_start` / `rpm` / `include_daily_basic`）已经在源码 docstring 完整说明。
+
+**回填后的视图重建**：
+```bash
+# 重要：backfill 完成后必须 rebuild views（parquet 路径未变但行数翻倍）
+.venv/bin/python -m quant_data.cli init   # 重跑 bootstrap_views
+.venv/bin/python -m quant_data.cli report  # 验证 view_rows 数字翻倍
+```
+
+**验证回归测试**：
+```bash
+.venv/bin/python -m pytest tests/test_resume_full.py -k backfill_20y -v
+# 3 passed: test_backfill_20y_fills_gap_and_stamps_first_trade_date
+#           test_backfill_20y_idempotent_when_rerun
+#           test_backfill_20y_skips_when_no_gap
+```
+
+**限制与待验证假设**：
+- **akshare 兜底未做 20 年回填**：本次只走 tushare；akshare 兜底是单日交叉验证用，全量补一遍仍属 Week 5+ 候选。
+- **tushare 200/120 积分档是否也有 2005 数据**：本任务只验了 2000 档；其它档位需另开 issue。
+- **DuckDB 视图在 ~16M 行的 mv_daily_v1 上查询延迟**：没做正式 benchmark（v0.4 §9.6 待验）；建议回测前用 EXPLAIN 跑一次代表性 query。
 
 ## 7. 成本与风险评估
 

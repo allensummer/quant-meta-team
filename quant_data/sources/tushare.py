@@ -24,7 +24,22 @@ log = logging.getLogger("quant_data.sources.tushare")
 class TushareAdapter:
     name = "tushare"
     version = "1.0.0"  # adapter version, distinct from schema version
-    capabilities = {"stock_basic", "trade_cal", "daily", "adj_factor", "daily_basic"}
+    capabilities = {
+        "stock_basic", "trade_cal", "daily", "adj_factor", "daily_basic",
+        # S-tier additions (v0.8 — ADM-652)
+        "moneyflow", "moneyflow_hsgt", "index_weight", "hsgt_top10", "fund_holdings",
+        # A-tier additions (v0.9 — ADM-653): 20 interfaces across 3 batches
+        # Batch 1 — 基础 + 事件 (8)
+        "index_classify", "index_daily", "index_member", "sw_index",
+        "stk_limit", "suspend", "dividend", "shares_float",
+        # Batch 2 — 财务三联表 + 财务指标 (7)
+        "fina_indicator", "income", "balancesheet", "cashflow",
+        "fina_mainbz", "fina_audit", "top10_holders",
+        # Batch 3 — 资金流 + 研报 + 股东 (5)
+        "top_list", "margin_detail", "top10_floatholders",
+        "stk_holdertrade", "report_rc",
+        # pro_bar minutes — 403 on 2000 积分档, do not include
+    }
 
     def __init__(self, pro_token: str, tier: int = 2000):
         self._token = pro_token
@@ -126,6 +141,28 @@ class TushareAdapter:
                    "too many requests", "每小时访问", "请降低请求频率")
         return any(m.lower() in msg.lower() for m in markers)
 
+    # Map our internal topic -> upstream tushare pro API method name.
+    # Most topics match exactly; the few that differ are listed below.
+    # ``shares_float`` -> ``share_float`` (singular on tushare).
+    TOPIC_TO_PRO_API: dict[str, str] = {
+        "shares_float": "share_float",
+    }
+
+    # Map our public-facing param name -> upstream tushare param name.
+    # We accept the canonical names our callers use; if the upstream uses
+    # a different name we transparently rename. Currently:
+    #   ``index_member`` callers can pass ``index_code`` (we translate to ``idx_code``).
+    TOPIC_PARAM_RENAMES: dict[str, dict[str, str]] = {
+        "index_member": {"index_code": "idx_code"},
+    }
+
+    # Topics that the 2000 积分档 cannot access (server-side returns
+    # "请指定正确的接口名"). On higher tiers they would work.
+    TIER_BLOCKED: frozenset[str] = frozenset({
+        "sw_index",       # 申万行业指数 — 需 ≥5000 积分档
+        "sw_index_daily", # 同上
+    })
+
     def _call(self, topic: str, **params: Any) -> pd.DataFrame:
         """Throttled call into tushare; preserves source-native column names.
 
@@ -133,9 +170,20 @@ class TushareAdapter:
         at ``_MAX_429_RETRIES``). After that, the error is re-raised so the
         driver can record the failed date and resume picks it up next run.
         """
-        method = getattr(self.pro, topic, None)
+        if topic in self.TIER_BLOCKED and self._tier < 5000:
+            raise RuntimeError(
+                f"tushare topic {topic!r} is tier-blocked on {self._tier} 积分档 "
+                f"(需 ≥5000 积分档). Marked in TIER_BLOCKED; will not retry."
+            )
+        upstream = self.TOPIC_TO_PRO_API.get(topic, topic)
+        method = getattr(self.pro, upstream, None)
         if method is None:
-            raise RuntimeError(f"tushare pro has no method named {topic!r}")
+            raise RuntimeError(f"tushare pro has no method named {upstream!r} (topic={topic!r})")
+        # Translate param names if the topic has a public/upstream mapping
+        # (e.g. our callers pass ``index_code``; upstream wants ``idx_code``).
+        renames = self.TOPIC_PARAM_RENAMES.get(topic, {})
+        if renames:
+            params = {renames.get(k, k): v for k, v in params.items()}
         t0 = time.monotonic()
         last_exc: BaseException | None = None
         for attempt in range(self._MAX_429_RETRIES + 1):

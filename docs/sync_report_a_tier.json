@@ -1,0 +1,217 @@
+{
+  "a_tier_total_topics": 20,
+  "topics_ok": 19,
+  "topics_blocked": 1,
+  "topics_failed": 0,
+  "total_rows_persisted_across_all_batches": 249098,
+  "total_wall_clock_s": 570.47,
+  "token_tier": 2000,
+  "rate_limit_ceiling_per_min": 200,
+  "rate_limit_hits_total": 0,
+  "pro_bar_skipped": true,
+  "pro_bar_skip_reason": "2000 \u79ef\u5206\u6863 \u2192 403",
+  "test_window": "2024-01-02..2024-01-15 (batch1) / 2024-01-01..2024-03-31 smoke (batch2) / 2024-01-02..2024-01-05 (batch3)",
+  "note": "batch2 smoke test used 50 representative ts_codes \u00d7 1 quarter-end (2024-03-31) to keep wall-clock bounded; full 5400-stock \u00d7 4-quarter backfill is in ADM-640",
+  "per_topic_summary": [
+    {
+      "topic": "tushare_index_classify",
+      "rows": 359,
+      "batches": 1,
+      "last_date": "2026-06-12",
+      "elapsed_s": 2.02,
+      "rate_limit_hit": 0,
+      "status": "ok",
+      "batch": "batch1"
+    },
+    {
+      "topic": "tushare_index_daily",
+      "rows": 90,
+      "batches": 90,
+      "last_date": "2024-01-15",
+      "elapsed_s": 27.16,
+      "rate_limit_hit": 0,
+      "status": "ok",
+      "batch": "batch1"
+    },
+    {
+      "topic": "tushare_index_member",
+      "rows": 162000,
+      "batches": 54,
+      "last_date": "2024-01-15",
+      "elapsed_s": 32.18,
+      "rate_limit_hit": 0,
+      "status": "ok",
+      "batch": "batch1"
+    },
+    {
+      "topic": "tushare_sw_index",
+      "rows": 0,
+      "batches": 0,
+      "last_date": null,
+      "elapsed_s": 13.43,
+      "rate_limit_hit": 0,
+      "status": "blocked",
+      "block_reason": "tier-blocked (need \u22655000 \u79ef\u5206\u6863)",
+      "batch": "batch1"
+    },
+    {
+      "topic": "tushare_stk_limit",
+      "rows": 40352,
+      "batches": 6,
+      "last_date": "2024-01-15",
+      "elapsed_s": 36.35,
+      "rate_limit_hit": 0,
+      "status": "ok",
+      "batch": "batch1"
+    },
+    {
+      "topic": "tushare_suspend",
+      "rows": 7,
+      "batches": 6,
+      "last_date": "2024-01-15",
+      "elapsed_s": 40.52,
+      "rate_limit_hit": 0,
+      "status": "ok",
+      "batch": "batch1"
+    },
+    {
+      "topic": "tushare_dividend",
+      "rows": 3,
+      "batches": 6,
+      "last_date": "2024-01-15",
+      "elapsed_s": 41.89,
+      "rate_limit_hit": 0,
+      "status": "ok",
+      "batch": "batch1"
+    },
+    {
+      "topic": "tushare_shares_float",
+      "rows": 30063,
+      "batches": 6,
+      "last_date": "2024-01-15",
+      "elapsed_s": 41.57,
+      "rate_limit_hit": 0,
+      "status": "ok",
+      "batch": "batch1"
+    },
+    {
+      "topic": "tushare_fina_indicator",
+      "rows": 59,
+      "batches": 52,
+      "last_date": "2024-03-31",
+      "elapsed_s": 7.84,
+      "rate_limit_hit": 0,
+      "status": "ok",
+      "batch": "batch2"
+    },
+    {
+      "topic": "tushare_income",
+      "rows": 64,
+      "batches": 52,
+      "last_date": "2024-03-31",
+      "elapsed_s": 6.69,
+      "rate_limit_hit": 0,
+      "status": "ok",
+      "batch": "batch2"
+    },
+    {
+      "topic": "tushare_balancesheet",
+      "rows": 62,
+      "batches": 52,
+      "last_date": "2024-03-31",
+      "elapsed_s": 7.81,
+      "rate_limit_hit": 0,
+      "status": "ok",
+      "batch": "batch2"
+    },
+    {
+      "topic": "tushare_cashflow",
+      "rows": 78,
+      "batches": 52,
+      "last_date": "2024-03-31",
+      "elapsed_s": 45.29,
+      "rate_limit_hit": 0,
+      "status": "ok",
+      "batch": "batch2"
+    },
+    {
+      "topic": "tushare_fina_mainbz",
+      "rows": 0,
+      "batches": 52,
+      "last_date": "2024-03-31",
+      "elapsed_s": 6.21,
+      "rate_limit_hit": 0,
+      "status": "ok",
+      "batch": "batch2"
+    },
+    {
+      "topic": "tushare_fina_audit",
+      "rows": 0,
+      "batches": 52,
+      "last_date": "2024-03-31",
+      "elapsed_s": 7.84,
+      "rate_limit_hit": 0,
+      "status": "ok",
+      "batch": "batch2"
+    },
+    {
+      "topic": "tushare_top10_holders",
+      "rows": 233,
+      "batches": 52,
+      "last_date": "2024-03-31",
+      "elapsed_s": 45.44,
+      "rate_limit_hit": 0,
+      "status": "ok",
+      "batch": "batch2"
+    },
+    {
+      "topic": "tushare_top_list",
+      "rows": 250,
+      "batches": 4,
+      "last_date": "2024-01-05",
+      "elapsed_s": 53.42,
+      "rate_limit_hit": 0,
+      "status": "ok",
+      "batch": "batch3"
+    },
+    {
+      "topic": "tushare_margin_detail",
+      "rows": 15368,
+      "batches": 4,
+      "last_date": "2024-01-05",
+      "elapsed_s": 44.91,
+      "rate_limit_hit": 0,
+      "status": "ok",
+      "batch": "batch3"
+    },
+    {
+      "topic": "tushare_top10_floatholders",
+      "rows": 0,
+      "batches": 0,
+      "elapsed_s": 0.09,
+      "rate_limit_hit": 0,
+      "status": "ok",
+      "batch": "batch3"
+    },
+    {
+      "topic": "tushare_stk_holdertrade",
+      "rows": 110,
+      "batches": 4,
+      "last_date": "2024-01-05",
+      "elapsed_s": 54.36,
+      "rate_limit_hit": 0,
+      "status": "ok",
+      "batch": "batch3"
+    },
+    {
+      "topic": "tushare_report_rc",
+      "rows": 0,
+      "batches": 0,
+      "last_date": null,
+      "elapsed_s": 55.45,
+      "rate_limit_hit": 0,
+      "status": "ok",
+      "batch": "batch3"
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-"""Source + Schema registries (v0.4 §6.2).
+"""Source + Schema registries (v0.4 §6.2, v0.8 +5 S-tier, v0.9 +20 A-tier).
 
 Downstream agents must only import from here. Adding a new data source is
 a one-line registration: copy ``sources/_template.py`` and add a key to
@@ -16,6 +16,34 @@ from quant_data.schemas import (
     DAILY_BASIC_V1,
     TRADE_CAL_V1,
     STOCK_BASIC_V1,
+    MONEYFLOW_V1,
+    MONEYFLOW_HSGT_V1,
+    INDEX_WEIGHT_V1,
+    HSGT_TOP10_V1,
+    FUND_HOLDINGS_V1,
+    # A-tier Batch 1 (v0.9 — ADM-653)
+    INDEX_CLASSIFY_V1,
+    INDEX_DAILY_V1,
+    INDEX_MEMBER_V1,
+    SW_INDEX_V1,
+    STK_LIMIT_V1,
+    SUSPEND_V1,
+    DIVIDEND_V1,
+    SHARES_FLOAT_V1,
+    # A-tier Batch 2
+    FINA_INDICATOR_V1,
+    INCOME_V1,
+    BALANCESHEET_V1,
+    CASHFLOW_V1,
+    FINA_MAINBZ_V1,
+    FINA_AUDIT_V1,
+    TOP10_HOLDERS_V1,
+    # A-tier Batch 3
+    TOP_LIST_V1,
+    MARGIN_DETAIL_V1,
+    TOP10_FLOATHOLDERS_V1,
+    STK_HOLDERTRADE_V1,
+    REPORT_RC_V1,
     SCHEMAS,
     get_schema,
 )
@@ -72,4 +100,32 @@ __all__ = [
     "DAILY_BASIC_V1",
     "TRADE_CAL_V1",
     "STOCK_BASIC_V1",
+    "MONEYFLOW_V1",
+    "MONEYFLOW_HSGT_V1",
+    "INDEX_WEIGHT_V1",
+    "HSGT_TOP10_V1",
+    "FUND_HOLDINGS_V1",
+    # A-tier Batch 1
+    "INDEX_CLASSIFY_V1",
+    "INDEX_DAILY_V1",
+    "INDEX_MEMBER_V1",
+    "SW_INDEX_V1",
+    "STK_LIMIT_V1",
+    "SUSPEND_V1",
+    "DIVIDEND_V1",
+    "SHARES_FLOAT_V1",
+    # A-tier Batch 2
+    "FINA_INDICATOR_V1",
+    "INCOME_V1",
+    "BALANCESHEET_V1",
+    "CASHFLOW_V1",
+    "FINA_MAINBZ_V1",
+    "FINA_AUDIT_V1",
+    "TOP10_HOLDERS_V1",
+    # A-tier Batch 3
+    "TOP_LIST_V1",
+    "MARGIN_DETAIL_V1",
+    "TOP10_FLOATHOLDERS_V1",
+    "STK_HOLDERTRADE_V1",
+    "REPORT_RC_V1",
 ]

@@ -28,6 +28,7 @@ class SyncStateRow(Base):
     __tablename__ = "sync_state"
     table = Column(String, primary_key=True)
     last_trade_date = Column(Date)
+    first_trade_date = Column(Date)  # set by 20-year backfill (v0.8); None = legacy
     last_run_at = Column(DateTime)
     status = Column(String, default="ok")
     error_msg = Column(Text, default="")
@@ -41,6 +42,29 @@ class MetaSQLite:
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self.engine = create_engine(f"sqlite:///{self.db_path}", future=True)
         Base.metadata.create_all(self.engine)
+        self._migrate_add_first_trade_date()
+
+    def _migrate_add_first_trade_date(self) -> None:
+        """One-shot migration: add first_trade_date to existing sync_state tables.
+
+        SQLAlchemy's ``create_all`` only creates missing tables, it does NOT
+        add new columns to existing tables. The 20-year backfill (v0.8) added
+        ``first_trade_date`` to the schema, so any pre-existing ``sync.sqlite``
+        (with the v0.4/v0.5/v0.6/v0.7 schema) needs this column added on
+        first load. Idempotent: the column is added only if it doesn't exist.
+        """
+        from sqlalchemy import text, inspect
+        insp = inspect(self.engine)
+        if "sync_state" not in insp.get_table_names():
+            return
+        cols = {c["name"] for c in insp.get_columns("sync_state")}
+        if "first_trade_date" in cols:
+            return
+        with self.engine.begin() as conn:
+            conn.execute(text(
+                "ALTER TABLE sync_state ADD COLUMN first_trade_date DATE"
+            ))
+        log.info("meta: migrated sync_state — added first_trade_date column")
 
     # ---------------- sync_state ----------------
     def get_cursor(self, table: str) -> date | None:
@@ -48,15 +72,29 @@ class MetaSQLite:
             row = s.execute(select(SyncStateRow).where(SyncStateRow.table == table)).scalar_one_or_none()
             return row.last_trade_date if row else None
 
-    def set_cursor(self, table: str, d: date, status: str = "ok", error: str = "") -> None:
+    def set_cursor(self, table: str, d: date, status: str = "ok", error: str = "",
+                   first_trade_date: date | None = None) -> None:
+        """Update the cursor row.
+
+        ``first_trade_date`` is sticky: once set by a backfill, subsequent
+        incremental syncs must NOT clobber it. Pass ``first_trade_date`` only
+        when the caller wants to back-fill the lower bound (e.g. 20y backfill).
+        """
         with Session(self.engine) as s:
             row = s.get(SyncStateRow, table)
             if row is None:
                 row = SyncStateRow(table=table, last_trade_date=d,
-                                   last_run_at=datetime.now(), status=status, error_msg=error)
+                                   first_trade_date=first_trade_date,
+                                   last_run_at=datetime.now(), status=status,
+                                   error_msg=error)
                 s.add(row)
             else:
                 row.last_trade_date = d
+                # ``first_trade_date`` is sticky: only set it on the first call
+                # that supplies a non-None value, never on later incremental
+                # updates. This prevents the cursor "floor" from drifting up.
+                if first_trade_date is not None and row.first_trade_date is None:
+                    row.first_trade_date = first_trade_date
                 row.last_run_at = datetime.now()
                 row.status = status
                 row.error_msg = error
@@ -68,6 +106,7 @@ class MetaSQLite:
             return {
                 r.table: {
                     "last_trade_date": r.last_trade_date.isoformat() if r.last_trade_date else None,
+                    "first_trade_date": r.first_trade_date.isoformat() if r.first_trade_date else None,
                     "last_run_at": r.last_run_at.isoformat() if r.last_run_at else None,
                     "status": r.status,
                     "error_msg": r.error_msg,

@@ -1,0 +1,108 @@
+{
+  "batch": "batch1",
+  "topics_in_batch": 8,
+  "sync_started": "2026-06-12T13:15:34.495560",
+  "range_start": "2024-01-08",
+  "range_end": "2024-01-15",
+  "total_elapsed_s": 235.12,
+  "topics_ok": 7,
+  "topics_failed": 0,
+  "topics_blocked": 1,
+  "total_rows_persisted": 232874,
+  "per_topic": [
+    {
+      "topic": "tushare_index_classify",
+      "rows": 359,
+      "batches": 1,
+      "last_date": "2026-06-12",
+      "elapsed_s": 2.02,
+      "rate_limit_hit": 0,
+      "ok": true,
+      "status": "ok"
+    },
+    {
+      "topic": "tushare_index_daily",
+      "rows": 90,
+      "batches": 90,
+      "last_date": "2024-01-15",
+      "elapsed_s": 27.16,
+      "rate_limit_hit": 0,
+      "ok": true,
+      "status": "ok"
+    },
+    {
+      "topic": "tushare_index_member",
+      "rows": 162000,
+      "batches": 54,
+      "last_date": "2024-01-15",
+      "elapsed_s": 32.18,
+      "rate_limit_hit": 0,
+      "ok": true,
+      "status": "ok"
+    },
+    {
+      "topic": "tushare_sw_index",
+      "rows": 0,
+      "batches": 0,
+      "last_date": null,
+      "elapsed_s": 13.43,
+      "rate_limit_hit": 0,
+      "ok": false,
+      "blocked": true,
+      "tier_blocked": true,
+      "error": "tier-blocked (need \u22655000 \u79ef\u5206\u6863, on 2000) [tier-blocked, properly skipped]",
+      "status": "blocked",
+      "block_reason": "tier-blocked (need \u22655000 \u79ef\u5206\u6863)"
+    },
+    {
+      "topic": "tushare_stk_limit",
+      "rows": 40352,
+      "batches": 6,
+      "last_date": "2024-01-15",
+      "elapsed_s": 36.35,
+      "rate_limit_hit": 0,
+      "ok": true,
+      "status": "ok"
+    },
+    {
+      "topic": "tushare_suspend",
+      "rows": 7,
+      "batches": 6,
+      "last_date": "2024-01-15",
+      "elapsed_s": 40.52,
+      "rate_limit_hit": 0,
+      "ok": true,
+      "status": "ok"
+    },
+    {
+      "topic": "tushare_dividend",
+      "rows": 3,
+      "batches": 6,
+      "last_date": "2024-01-15",
+      "elapsed_s": 41.89,
+      "rate_limit_hit": 0,
+      "ok": true,
+      "status": "ok"
+    },
+    {
+      "topic": "tushare_shares_float",
+      "rows": 30063,
+      "batches": 6,
+      "last_date": "2024-01-15",
+      "elapsed_s": 41.57,
+      "rate_limit_hit": 0,
+      "ok": true,
+      "status": "ok"
+    }
+  ],
+  "a_tier_aggregate": {
+    "token_tier": 2000,
+    "rate_limit_ceiling_per_min": 200,
+    "rate_limit_hits_total": 0,
+    "rows_persisted_in_batch": 232874,
+    "topics_total": 8,
+    "topics_working": 7,
+    "topics_blocked_by_tier": 1,
+    "topics_failed": 0
+  }
+}

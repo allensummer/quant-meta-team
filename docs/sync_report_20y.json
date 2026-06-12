@@ -1,0 +1,96 @@
+{
+  "generated_at": "2026-06-11",
+  "data_dir": "/Volumes/RSS_DATA/quant_data",
+  "backfill_target": {
+    "start_date": "2005-01-04",
+    "end_date": "2026-06-05",
+    "span_years": 21.4
+  },
+  "tables": [
+    {
+      "topic": "raw_tushare_stock_basic",
+      "rows": 35109,
+      "min": "1990-12-01",
+      "max": "2026-06-11"
+    },
+    {
+      "topic": "raw_tushare_trade_cal",
+      "rows": 52523732,
+      "min": "1990-12-19",
+      "max": "2026-12-31"
+    },
+    {
+      "topic": "raw_tushare_daily",
+      "rows": 29860974,
+      "min": "2005-01-04",
+      "max": "2026-06-05"
+    },
+    {
+      "topic": "raw_tushare_adj_factor",
+      "rows": 31111531,
+      "min": "2005-01-04",
+      "max": "2026-06-05"
+    },
+    {
+      "topic": "raw_tushare_daily_basic",
+      "rows": 29534999,
+      "min": "2005-01-04",
+      "max": "2026-06-05"
+    }
+  ],
+  "view_rows": {
+    "mv_daily_v1": 29860974,
+    "mv_daily_qfq": 58117627,
+    "mv_daily_hfq": 58117627,
+    "mv_trade_cal": 35104702
+  },
+  "cursors": {
+    "tushare_daily": {
+      "last_trade_date": "2026-06-05",
+      "first_trade_date": "2005-01-04",
+      "last_run_at": "2026-06-11T11:48:14.395085",
+      "status": "ok",
+      "error_msg": ""
+    },
+    "tushare_adj_factor": {
+      "last_trade_date": "2026-06-05",
+      "first_trade_date": "2005-01-04",
+      "last_run_at": "2026-06-11T12:22:54.098029",
+      "status": "ok",
+      "error_msg": ""
+    },
+    "tushare_daily_basic": {
+      "last_trade_date": "2026-06-05",
+      "first_trade_date": "2005-01-04",
+      "last_run_at": "2026-06-11T13:00:06.812449",
+      "status": "ok",
+      "error_msg": ""
+    },
+    "tushare_stock_basic": {
+      "last_trade_date": "2026-06-11",
+      "first_trade_date": "1990-12-01",
+      "last_run_at": "2026-06-11T10:47:43.279054",
+      "status": "ok",
+      "error_msg": ""
+    },
+    "tushare_trade_cal": {
+      "last_trade_date": "2026-06-05",
+      "first_trade_date": "2005-01-04",
+      "last_run_at": "2026-06-11T11:13:15.504883",
+      "status": "ok",
+      "error_msg": ""
+    }
+  },
+  "disk": {
+    "total_bytes": 7577917079,
+    "total_gb": 7.057,
+    "pre_backfill_gb": 3.9,
+    "delta_gb": 3.157,
+    "budget_gb": 8.0,
+    "within_budget": true
+  },
+  "rate_limit_hits": 0,
+  "wall_clock_minutes": 133.7,
+  "rows_added_total": 100127435,
+  "backfill_batches_total": 19590
+}

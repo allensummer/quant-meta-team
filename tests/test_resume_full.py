@@ -189,3 +189,120 @@ def test_resume_after_cursor_rewind(tmp_data_dir):
 
     cur = meta.get_cursor("fast_daily")
     assert cur >= date(2023, 12, 29), f"rewound cursor should re-advance, got {cur}"
+
+
+# ---------------------------------------------------------------------------
+# 5. 20-year backfill (v0.8 §6.7) — gap-fill + sticky first_trade_date
+# ---------------------------------------------------------------------------
+def test_backfill_20y_fills_gap_and_stamps_first_trade_date(tmp_data_dir):
+    """The backfill-20y driver must:
+      1. Snapshot the existing cursor first.
+      2. Rewind the cursor, fill the gap with sync_table.
+      3. Restore the cursor to its original value (so resume from 2026-06-05
+         is unaffected).
+      4. Stamp ``first_trade_date`` in sync_state — this is the *sticky*
+         lower bound that subsequent incremental syncs must preserve.
+    """
+    from quant_data.sync.backfill import backfill_one_table, snapshot_cursors, restore_cursors
+
+    register_source("fast", _FastDailySource())
+    # Window: pretend the operator already synced 2023-01-04 .. 2024-01-05.
+    # We backfill a 5-year window below that.
+    _seed_trade_cal(tmp_data_dir, date(2018, 1, 1), date(2024, 3, 1))
+    meta = MetaSQLite()
+    original_cursor = date(2024, 1, 5)
+    meta.set_cursor("fast_daily", original_cursor, status="ok")
+    # Pre-backfill snapshot of all cursors
+    snap = snapshot_cursors()
+
+    try:
+        backfill_start = date(2018, 1, 4)
+        report = backfill_one_table(
+            "daily", backfill_start=backfill_start,
+            original_cursor=original_cursor, source="fast",
+        )
+
+        # (1) Gap was filled — sync_table should have written rows.
+        assert report.rows_added > 0, f"backfill added no rows: {report.to_dict()}"
+        assert report.batches > 1000, f"backfill batches too small: {report.batches}"
+        # (2) Cursor restored to original.
+        assert meta.get_cursor("fast_daily") == original_cursor, (
+            f"cursor not restored: got {meta.get_cursor('fast_daily')}"
+        )
+        # (3) first_trade_date stamped and sticky.
+        # ``set_cursor`` returns the row but doesn't expose first_trade_date
+        # via get_cursor; we read it back via all_cursors().
+        cursors = meta.all_cursors()
+        assert cursors["fast_daily"]["first_trade_date"] == backfill_start.isoformat(), (
+            f"first_trade_date not stamped: {cursors['fast_daily']}"
+        )
+    finally:
+        restore_cursors(snap)
+
+
+def test_backfill_20y_idempotent_when_rerun(tmp_data_dir):
+    """Re-running backfill on an already-backfilled table must be a no-op.
+
+    The cursor is at original_cursor (max date with data), and backfill_start
+    is BEFORE original_cursor but the gap is already filled. The driver must
+    fill it again (because the gap partitions exist), but the cursor and
+    first_trade_date must remain stable.
+    """
+    from quant_data.sync.backfill import backfill_one_table, snapshot_cursors, restore_cursors
+
+    register_source("fast", _FastDailySource())
+    _seed_trade_cal(tmp_data_dir, date(2018, 1, 1), date(2024, 3, 1))
+    meta = MetaSQLite()
+    original_cursor = date(2024, 1, 5)
+    meta.set_cursor("fast_daily", original_cursor, status="ok")
+    snap = snapshot_cursors()
+
+    try:
+        backfill_start = date(2018, 1, 4)
+        # First run: fills the gap.
+        r1 = backfill_one_table("daily", backfill_start=backfill_start,
+                                original_cursor=original_cursor, source="fast")
+        first = meta.get_cursor("fast_daily")
+        first_first = meta.all_cursors()["fast_daily"]["first_trade_date"]
+        assert first == original_cursor
+        assert first_first == backfill_start.isoformat()
+
+        # Second run: must re-fill (idempotent: same rows overwritten), and
+        # leave cursor + first_trade_date unchanged.
+        r2 = backfill_one_table("daily", backfill_start=backfill_start,
+                                original_cursor=original_cursor, source="fast")
+        second = meta.get_cursor("fast_daily")
+        second_first = meta.all_cursors()["fast_daily"]["first_trade_date"]
+        assert second == first, f"cursor changed: {first} -> {second}"
+        assert second_first == first_first, f"first_trade_date changed"
+        # Both runs must have produced a non-zero number of rows (the fake
+        # source is deterministic; re-running is a "no-op" only in the sense
+        # that the data is the same — but the sync loop still iterates).
+        assert r1.rows_added == r2.rows_added
+    finally:
+        restore_cursors(snap)
+
+
+def test_backfill_20y_skips_when_no_gap(tmp_data_dir):
+    """If backfill_start is AFTER the cursor, there is no gap to fill."""
+    from quant_data.sync.backfill import backfill_one_table, snapshot_cursors, restore_cursors
+
+    register_source("fast", _FastDailySource())
+    _seed_trade_cal(tmp_data_dir, date(2023, 1, 1), date(2024, 3, 1))
+    meta = MetaSQLite()
+    original_cursor = date(2024, 1, 5)
+    meta.set_cursor("fast_daily", original_cursor, status="ok")
+    snap = snapshot_cursors()
+
+    try:
+        # backfill_start is AFTER original_cursor — no gap to fill.
+        report = backfill_one_table(
+            "daily", backfill_start=date(2025, 1, 1),
+            original_cursor=original_cursor, source="fast",
+        )
+        assert report.rows_added == 0
+        assert report.batches == 0
+        # Cursor must NOT have moved (rewind is internal; final state == original).
+        assert meta.get_cursor("fast_daily") == original_cursor
+    finally:
+        restore_cursors(snap)

@@ -2,7 +2,7 @@
 
 We don't hit tushare in CI. The tests verify the *wiring*:
 
-  1. ``run_once`` invokes all 5 table sync functions in the documented order.
+  1. ``run_once`` invokes every configured table sync function in the documented order.
   2. ``--dry-run`` short-circuits the network but still touches every topic.
   3. ``--only`` filters down to a topic subset.
   4. ``build_scheduler`` produces a cron-style APScheduler with the right
@@ -12,7 +12,7 @@ We don't hit tushare in CI. The tests verify the *wiring*:
 """
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 from unittest.mock import patch
 
 import pytest
@@ -25,10 +25,10 @@ from quant_data.scheduler import (
 
 
 # ---------------------------------------------------------------------------
-# 1. run_once hits all 5 default topics (in documented order)
+# 1. run_once hits all 10 default topics (5 legacy + 5 S-tier v0.8)
 # ---------------------------------------------------------------------------
 def test_run_once_invokes_all_5_tables(tmp_data_dir, monkeypatch):
-    """All 5 default topics must be touched in a single sweep."""
+    """All 10 default topics must be touched in a single sweep (v0.8 — ADM-652)."""
     seen: list[tuple[str, dict]] = []
 
     def fake_sync_stock_basic():
@@ -51,19 +51,54 @@ def test_run_once_invokes_all_5_tables(tmp_data_dir, monkeypatch):
         seen.append(("daily_basic", {"start": start_date, "end": end_date}))
         return {"topic": "daily_basic", "rows": 1}
 
-    monkeypatch.setattr("quant_data.sync.driver.sync_stock_basic", fake_sync_stock_basic)
-    monkeypatch.setattr("quant_data.sync.driver.sync_trade_cal", fake_sync_trade_cal)
-    monkeypatch.setattr("quant_data.sync.driver.sync_daily", fake_sync_daily)
-    monkeypatch.setattr("quant_data.sync.driver.sync_adj_factor", fake_sync_adj_factor)
-    monkeypatch.setattr("quant_data.sync.driver.sync_daily_basic", fake_sync_daily_basic)
+    def fake_sync_moneyflow_hsgt(*, start_date, end_date):
+        seen.append(("moneyflow_hsgt", {"start": start_date, "end": end_date}))
+        return {"topic": "moneyflow_hsgt", "rows": 1}
+
+    def fake_sync_hsgt_top10(*, start_date, end_date):
+        seen.append(("hsgt_top10", {"start": start_date, "end": end_date}))
+        return {"topic": "hsgt_top10", "rows": 1}
+
+    def fake_sync_moneyflow(*, start_date, end_date):
+        seen.append(("moneyflow", {"start": start_date, "end": end_date}))
+        return {"topic": "moneyflow", "rows": 1}
+
+    def fake_sync_index_weight(*, start_date, end_date):
+        seen.append(("index_weight", {"start": start_date, "end": end_date}))
+        return {"topic": "index_weight", "rows": 1}
+
+    def fake_sync_fund_holdings(*, start_date, end_date):
+        seen.append(("fund_holdings", {"start": start_date, "end": end_date}))
+        return {"topic": "fund_holdings", "rows": 1}
+
+    for name, fn in [
+        ("sync_stock_basic", fake_sync_stock_basic),
+        ("sync_trade_cal", fake_sync_trade_cal),
+        ("sync_daily", fake_sync_daily),
+        ("sync_adj_factor", fake_sync_adj_factor),
+        ("sync_daily_basic", fake_sync_daily_basic),
+        ("sync_moneyflow_hsgt", fake_sync_moneyflow_hsgt),
+        ("sync_hsgt_top10", fake_sync_hsgt_top10),
+        ("sync_moneyflow", fake_sync_moneyflow),
+        ("sync_index_weight", fake_sync_index_weight),
+        ("sync_fund_holdings", fake_sync_fund_holdings),
+    ]:
+        monkeypatch.setattr(f"quant_data.sync.driver.{name}", fn)
 
     results = run_once(lookback_days=1)
     topics = [s[0] for s in seen]
-    assert topics == ["stock_basic", "trade_cal", "daily", "adj_factor", "daily_basic"]
+    assert topics == [
+        "stock_basic", "trade_cal", "daily", "adj_factor", "daily_basic",
+        "moneyflow_hsgt", "hsgt_top10", "moneyflow", "index_weight", "fund_holdings",
+    ]
     # Each result must be a successful JobResult
     assert all(isinstance(r, JobResult) and r.ok for r in results)
     # Time-series tables get start_date=end_date=lookback_days
-    assert seen[2][1] == {"start": date(2026, 6, 4), "end": date(2026, 6, 5)}
+    # (start_date is end_date - 1, end_date is end_date)
+    end_d = date.today()
+    start_d = end_d - timedelta(days=1)
+    # The 3rd topic in DEFAULT_JOBS is "daily" (index 2)
+    assert seen[2][1] == {"start": start_d, "end": end_d}
 
 
 # ---------------------------------------------------------------------------
@@ -78,12 +113,15 @@ def test_run_once_dry_run_does_not_touch_network(tmp_data_dir, monkeypatch):
         raise AssertionError("sync_* must NOT be called in dry-run")
 
     for name in ("sync_stock_basic", "sync_trade_cal", "sync_daily",
-                 "sync_adj_factor", "sync_daily_basic"):
+                 "sync_adj_factor", "sync_daily_basic",
+                 # S-tier additions (v0.8 — ADM-652)
+                 "sync_moneyflow_hsgt", "sync_hsgt_top10", "sync_moneyflow",
+                 "sync_index_weight", "sync_fund_holdings"):
         monkeypatch.setattr(f"quant_data.sync.driver.{name}", boom)
 
     results = run_once(dry_run=True)
     assert called == []
-    assert len(results) == 5
+    assert len(results) == 10
     assert all(r.ok for r in results)
     assert all(r.report and r.report.get("dry_run") for r in results)
 
@@ -225,6 +263,7 @@ def test_cli_run_once_dry_run_exit_0(tmp_data_dir):
     payload = json.loads(m.group(0))
     assert {p["topic"] for p in payload} == {
         "stock_basic", "trade_cal", "daily", "adj_factor", "daily_basic",
+        "moneyflow_hsgt", "hsgt_top10", "moneyflow", "index_weight", "fund_holdings",
     }
     assert all(p["report"]["dry_run"] for p in payload)
 

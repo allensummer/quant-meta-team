@@ -1,0 +1,219 @@
+{
+  "tier": "A",
+  "probed_at": "2026-06-12T13:01:52.227808",
+  "token_tier": 2000,
+  "probes_total": 20,
+  "probes_ok": 17,
+  "probes_failed_hard": 0,
+  "probes_tier_blocked": 1,
+  "probes_rate_limited": 1,
+  "pro_bar_skipped": true,
+  "pro_bar_skip_reason": "2000 \u79ef\u5206\u6863 \u2192 403",
+  "sw_index_note": "\u7533\u4e07\u884c\u4e1a\u6307\u6570 API \u5728 2000 \u79ef\u5206\u6863\u88ab\u670d\u52a1\u7aef\u62e6\u622a(\u9700 \u22655000 \u79ef\u5206\u6863)",
+  "report_rc_note": "\u670d\u52a1\u7aef\u786c\u9650\u901f 1 req/min,\u4e14\u7d2f\u8ba1 5 \u6b21\u540e\u5347\u7ea7\u4e3a 1 req/hour,prod sync \u4e0d\u5b9e\u7528",
+  "per_interface": [
+    {
+      "api": "index_classify",
+      "ok": true,
+      "rows": 359,
+      "cols": 7,
+      "wall_clock_s": 0.476,
+      "params": {
+        "ts_code": "000300.SH"
+      }
+    },
+    {
+      "api": "index_daily",
+      "ok": true,
+      "rows": 1,
+      "cols": 11,
+      "wall_clock_s": 0.068,
+      "params": {
+        "ts_code": "000300.SH",
+        "trade_date": "20240102"
+      }
+    },
+    {
+      "api": "index_member",
+      "ok": true,
+      "rows": 3000,
+      "cols": 5,
+      "wall_clock_s": 0.124,
+      "params": {
+        "idx_code": "000300.SH",
+        "trade_date": "20240102"
+      }
+    },
+    {
+      "api": "stk_limit",
+      "ok": true,
+      "rows": 1,
+      "cols": 4,
+      "wall_clock_s": 0.067,
+      "params": {
+        "ts_code": "000001.SZ",
+        "trade_date": "20240102"
+      }
+    },
+    {
+      "api": "suspend",
+      "ok": true,
+      "rows": 1,
+      "cols": 4,
+      "wall_clock_s": 0.078,
+      "params": {
+        "suspend_date": "20240102"
+      }
+    },
+    {
+      "api": "dividend",
+      "ok": true,
+      "rows": 53,
+      "cols": 14,
+      "wall_clock_s": 0.067,
+      "params": {
+        "ts_code": "000001.SZ"
+      }
+    },
+    {
+      "api": "shares_float",
+      "ok": true,
+      "rows": 214,
+      "cols": 7,
+      "wall_clock_s": 0.068,
+      "params": {
+        "ts_code": "000001.SZ"
+      }
+    },
+    {
+      "api": "fina_indicator",
+      "ok": true,
+      "rows": 1,
+      "cols": 108,
+      "wall_clock_s": 0.07,
+      "params": {
+        "ts_code": "000001.SZ",
+        "period": "20231231"
+      }
+    },
+    {
+      "api": "income",
+      "ok": true,
+      "rows": 1,
+      "cols": 85,
+      "wall_clock_s": 0.091,
+      "params": {
+        "ts_code": "000001.SZ",
+        "period": "20231231"
+      }
+    },
+    {
+      "api": "balancesheet",
+      "ok": true,
+      "rows": 2,
+      "cols": 152,
+      "wall_clock_s": 0.076,
+      "params": {
+        "ts_code": "000001.SZ",
+        "period": "20231231"
+      }
+    },
+    {
+      "api": "cashflow",
+      "ok": true,
+      "rows": 2,
+      "cols": 97,
+      "wall_clock_s": 0.07,
+      "params": {
+        "ts_code": "000001.SZ",
+        "period": "20231231"
+      }
+    },
+    {
+      "api": "fina_mainbz",
+      "ok": true,
+      "rows": 28,
+      "cols": 8,
+      "wall_clock_s": 0.079,
+      "params": {
+        "ts_code": "000001.SZ",
+        "period": "20231231"
+      }
+    },
+    {
+      "api": "fina_audit",
+      "ok": true,
+      "rows": 1,
+      "cols": 7,
+      "wall_clock_s": 0.065,
+      "params": {
+        "ts_code": "000001.SZ",
+        "period": "20231231"
+      }
+    },
+    {
+      "api": "top10_holders",
+      "ok": true,
+      "rows": 10,
+      "cols": 9,
+      "wall_clock_s": 0.072,
+      "params": {
+        "ts_code": "000001.SZ",
+        "period": "20231231"
+      }
+    },
+    {
+      "api": "top_list",
+      "ok": true,
+      "rows": 64,
+      "cols": 15,
+      "wall_clock_s": 0.07,
+      "params": {
+        "trade_date": "20240102"
+      }
+    },
+    {
+      "api": "margin_detail",
+      "ok": true,
+      "rows": 3841,
+      "cols": 10,
+      "wall_clock_s": 0.211,
+      "params": {
+        "trade_date": "20240102"
+      }
+    },
+    {
+      "api": "top10_floatholders",
+      "ok": true,
+      "rows": 6000,
+      "cols": 9,
+      "wall_clock_s": 0.559,
+      "params": {
+        "period": "20231231"
+      }
+    },
+    {
+      "api": "stk_holdertrade",
+      "ok": true,
+      "rows": 17,
+      "cols": 11,
+      "wall_clock_s": 0.066,
+      "params": {
+        "ts_code": "000001.SZ"
+      }
+    }
+  ],
+  "failures": [],
+  "tier_blocked": [
+    {
+      "api": "sw_index",
+      "reason": "tushare topic 'sw_index' is tier-blocked on 2000 \u79ef\u5206\u6863 (\u9700 \u22655000 \u79ef\u5206\u6863). Marked in TIER_BLOCKED; will not"
+    }
+  ],
+  "rate_limited": [
+    {
+      "api": "report_rc",
+      "reason": "\u62b1\u6b49\uff0c\u60a8\u8bbf\u95ee\u63a5\u53e3(report_rc)\u9891\u7387\u8d85\u9650(1\u6b21/\u5c0f\u65f6)\uff0c\u5177\u4f53\u9891\u6b21\u8be6\u60c5\uff1ahttps://tushare.pro/document/1?doc_id=108\u3002"
+    }
+  ]
+}

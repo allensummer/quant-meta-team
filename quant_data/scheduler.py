@@ -7,7 +7,7 @@ Why APScheduler (over cron / launchd) for the in-process loop
 - ``BlockingScheduler`` plays nicely with launchd ``KeepAlive=false``
   + Python ``atexit`` — launchd restarts the process on crash.
 - ``dry_run`` is a first-class mode so CI / smoke tests can verify the
-  5 tables are scheduled without actually hitting tushare.
+  scheduled jobs are wired up without actually hitting tushare.
 
 The scheduler NEVER calls tushare on its own — it delegates to
 ``quant_data.sync.driver`` so resume / cursor / lineage semantics are
@@ -34,6 +34,16 @@ DEFAULT_JOBS: list[dict[str, Any]] = [
     {"topic": "daily",       "fn_name": "sync_daily",       "kwargs": {}},
     {"topic": "adj_factor",  "fn_name": "sync_adj_factor",  "kwargs": {}},
     {"topic": "daily_basic", "fn_name": "sync_daily_basic", "kwargs": {}},
+    # S-tier additions (v0.8 — ADM-652). Order: cheap & high-signal first
+    # (moneyflow_hsgt = 1 row/day), then per-stock tables.
+    {"topic": "moneyflow_hsgt", "fn_name": "sync_moneyflow_hsgt", "kwargs": {}},
+    {"topic": "hsgt_top10",     "fn_name": "sync_hsgt_top10",     "kwargs": {}},
+    {"topic": "moneyflow",      "fn_name": "sync_moneyflow",      "kwargs": {}},
+    {"topic": "index_weight",   "fn_name": "sync_index_weight",   "kwargs": {}},
+    # fund_holdings is quarterly — no point pulling it every night, but
+    # including in the nightly sweep is a no-op once the cursor hits a
+    # current quarter end.
+    {"topic": "fund_holdings",  "fn_name": "sync_fund_holdings",  "kwargs": {}},
 ]
 
 
@@ -68,7 +78,7 @@ class ScheduleConfig:
 # ---------------------------------------------------------------------------
 def run_once(*, lookback_days: int = 1, dry_run: bool = False,
              only: Sequence[str] = ()) -> list[JobResult]:
-    """Execute the standard 5-table sweep exactly once.
+    """Execute the standard scheduled sweep exactly once.
 
     Used by:
       - ``python -m quant_data.cli run-once`` (manual cron / launchd)
@@ -108,6 +118,12 @@ def run_once(*, lookback_days: int = 1, dry_run: bool = False,
                 elif topic == "trade_cal":
                     report = fn(start=start, end=end)
                 else:
+                    # sync_moneyflow / sync_moneyflow_hsgt / sync_hsgt_top10 /
+                    # sync_index_weight / sync_fund_holdings / sync_daily /
+                    # sync_adj_factor / sync_daily_basic all take
+                    # ``start_date`` / ``end_date``. fund_holdings treats
+                    # those as quarter-end bounds; the other 7 treat them
+                    # as trade_date bounds.
                     report = fn(start_date=start, end_date=end)
                 log.info("%s -> %s", topic, report)
                 results.append(JobResult(topic=topic, ok=True, report=report,

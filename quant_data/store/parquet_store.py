@@ -31,6 +31,12 @@ _PARTITION_COL = {
     "daily_basic": "trade_date",
     "trade_cal": "cal_date",
     "stock_basic": None,  # snapshot
+    # S-tier additions (v0.8 — ADM-652)
+    "moneyflow": "trade_date",       # per-stock-per-day, partitioned by trade_date
+    "moneyflow_hsgt": "trade_date",  # 1 row/day, partitioned by trade_date
+    "index_weight": "trade_date",    # (index, con, date) rows, partition by date
+    "hsgt_top10": "trade_date",      # ~10 rows/day, partition by date
+    "fund_holdings": "end_date",     # quarterly; partition by quarter end (not trade_date)
 }
 
 
